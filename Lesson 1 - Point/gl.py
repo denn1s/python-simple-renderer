@@ -104,14 +104,12 @@ class Render(object):
     f.close()
 
   def point(self, x, y, color = None):
+    # 0,0 was intentionally left in the bottom left corner to mimic opengl
     self.pixels[y][x] = color or self.current_color
-
+    
   def set_color(self, color):
     self.current_color = color
 
-r = Render(800, 600)
-r.point(10, 590)
-r.write('out.bmp')
 
 
 
