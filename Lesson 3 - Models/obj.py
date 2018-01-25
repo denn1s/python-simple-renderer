@@ -22,7 +22,7 @@ from gl import Render
 width, height = 800, 600
 r = Render(width, height)
 
-model = Obj('./model.obj')
+model = Obj('./cube.obj')
 
 for face in model.vfaces:
     vcount = len(face)
