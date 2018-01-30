@@ -1,4 +1,5 @@
 import struct
+from obj import Obj
 
 # ===============================================================
 # Utilities
@@ -123,6 +124,7 @@ class Render(object):
     try:
       self.pixels[y][x] = color or self.current_color
     except:
+      # To avoid index out of range exceptions
       pass
     
   def line(self, start, end, color = None):
@@ -164,3 +166,33 @@ class Render(object):
         if offset >= threshold:
             y += 1 if y1 < y2 else -1
             threshold += dx * 2
+    
+  def load(self, filename, translate=(0, 0), scale=(1, 1)):
+    """
+    Loads an obj file in the screen
+    wireframe only
+    Input: 
+      filename: the full path of the obj file
+      translate: (translateX, translateY) how much the model will be translated during render
+      scale: (scaleX, scaleY) how much the model should be scaled
+    """
+    model = Obj(filename)
+
+    for face in model.vfaces:
+        vcount = len(face)
+        for j in range(vcount):
+            f1 = face[j][0]
+            f2 = face[(j+1)%vcount][0]
+
+            v1 = model.vertices[f1 - 1]
+            v2 = model.vertices[f2 - 1]
+
+            scaleX, scaleY = scale
+            translateX, translateY = translate
+
+            x1 = round((v1[0] + translateX) * scaleX); 
+            y1 = round((v1[1] + translateY) * scaleY); 
+            x2 = round((v2[0] + translateX) * scaleX); 
+            y2 = round((v2[1] + translateY) * scaleY); 
+      
+            self.line((x1, y1), (x2, y2))

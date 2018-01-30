@@ -84,7 +84,7 @@ def isometric_cube():
 
 
 if __name__ == "__main__":
-    example = sys.argv[1]
+    example = sys.argv[1] if len(sys.argv) > 1 else ""
     if example == "single_line":
         single_line()
     elif example == "multi_line":

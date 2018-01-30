@@ -141,7 +141,7 @@ def stars():
 
 
 if __name__ == "__main__":
-    example = sys.argv[1]
+    example = sys.argv[1] if len(sys.argv) > 1 else ""
     if example == "single_point":
         single_point()
     elif example == "square":
