@@ -50,18 +50,21 @@ def bbox(A, B, C):
 
   return mins, maxs
 
+# import numpy
 
 def barycentric(A, B, C, P):
-  bary = cross(Vertex3(C.x - A.x, B.x - A.x, P.x - A.x), 
-            Vertex3(C.y - A.y, B.y - A.y, P.y - A.y))
+  bary = cross(
+    Vertex3(C.x - A.x, B.x - A.x, A.x - P.x), 
+    Vertex3(C.y - A.y, B.y - A.y, A.y - P.y)
+  )
 
-  return 1 - (bary.x + bary.y) / bary.z, (bary.y / bary.z), (bary.x / bary.z)
+  return 1 - (bary[0] + bary[1]) / bary[2], bary[1] / bary[2], bary[0] / bary[2]
 
 
-b = barycentric(Vertex3(0, 0, 0), 
-                Vertex3(50, 50, 0), 
-                Vertex3(100, 0, 0), 
-                Vertex3(25, 50, 0))
+b = barycentric(Vertex2(0, 0), 
+                Vertex2(50, 50), 
+                Vertex2(100, 0), 
+                Vertex2(25, 25))
 
 print(b)
 
@@ -360,6 +363,6 @@ class Render(object):
         """
 
 
-r = Render(800, 600)
-r.load('./model.obj')
-r.display()
+# r = Render(800, 600)
+# r.load('./model.obj')
+# r.display()
