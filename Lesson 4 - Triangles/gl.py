@@ -10,6 +10,101 @@ Vertex2 = namedtuple('Point', ['x', 'y'])
 Vertex3 = namedtuple('Point', ['x', 'y', 'z'])
 
 
+def sum(v0, v1):
+  return Vertex3(v0.x + v1.x, v0.y + v1.y, v0.z + v1.z)
+
+def sub(v0, v1):
+  return Vertex3(v0.x - v1.x, v0.y - v1.y, v0.z - v1.z)
+
+
+def mul(v0, k):
+  return Vertex3(v0.x * k, v0.y * k, v0.z *k)
+
+
+def dot(v0, v1):
+  return v0.x * v1.x + v0.y * v1.y + v0.z * v1.z
+
+
+def cross(v0, v1):
+  return Vertex3(
+    v0.y * v1.z - v0.z * v1.y,
+    v0.z * v1.x - v0.x * v1.z,
+    v0.x * v1.y - v0.y * v1.x,
+  )
+
+def length(v0):
+  return (v0.x**2 + v0.y**2 + v0.z**2)**0.5
+
+
+def norm(v0):
+  v0length = length(v0)
+  return Vertex3(v0.x/v0length, v0.y/v0length, v0.z/v0length)
+
+def bbox(A, B, C):
+  xs = [ A.x, B.x, C.x ]
+  ys = [ A.y, B.y, C.y ]
+  zs = [ A.z, B.z, C.z ]
+
+  mins = [ min(xs), min(ys), min(zs) ]
+  maxs = [ max(xs), max(ys), max(zs) ]
+
+  return mins, maxs
+
+
+def barycentric(A, B, C, P):
+  bary = cross(Vertex3(C.x - A.x, B.x - A.x, P.x - A.x), 
+            Vertex3(C.y - A.y, B.y - A.y, P.y - A.y))
+
+  return 1 - (bary.x + bary.y) / bary.z, (bary.y / bary.z), (bary.x / bary.z)
+
+
+b = barycentric(Vertex3(0, 0, 0), 
+                Vertex3(50, 50, 0), 
+                Vertex3(100, 0, 0), 
+                Vertex3(25, 50, 0))
+
+print(b)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def char(c):
   """
   Input: requires a size 1 string
@@ -267,4 +362,4 @@ class Render(object):
 
 r = Render(800, 600)
 r.load('./model.obj')
-r.write('out.bmp')
+r.display()
