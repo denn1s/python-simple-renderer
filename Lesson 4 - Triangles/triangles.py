@@ -1,8 +1,8 @@
-from gl import Render, color
+from gl import Render, color, barycentric, bbox
 from collections import namedtuple
 
 Vector2 = namedtuple('Point', ['x', 'y'])
-
+V2 = Vector2
 
 RED = color(255, 0, 0)
 BLUE = color(0, 0, 255)
@@ -81,18 +81,33 @@ def triangle(v0, v1, v2, color = None):
     r.line(c, a, RED)
 
 
+def triangle2(a, b, c, color=None):
+    print(a, b, c)
+    A = V2(*a)
+    B = V2(*b)
+    C = V2(*c)
+
+    bbox_min, bbox_max = bbox(A, B, C)
+
+    for x in range(bbox_min.x, bbox_max.x + 1):
+      for y in range(bbox_min.y, bbox_max.y + 1):
+        coords = barycentric(A, B, C, V2(x, y))
+        if all(coord > 0 for coord in coords):
+          r.point(x, y, color)
 
 
+triangle = triangle2
 
-# triangle((20, 140), (100, 320), (140, 160), RED)
-# triangle((560, 100), (400, 2), (240, 560), BLUE)
-# triangle((760, 300), (640, 320), (660, 360), GREEN)
+
+triangle((20, 140), (100, 320), (140, 160), RED)
+triangle((560, 100), (400, 2), (240, 560), BLUE)
+triangle((760, 300), (640, 320), (660, 360), GREEN)
 
 # triangle((600, 600), (600, 600), (600, 600), RED)
 # triangle((600, 600), (600, 100), (100, 100), RED)
 # triangle((100, 500), (500, 500), (100, 100), RED)
 
-# r.display()
+r.write('./out.bmp')
 
 
 

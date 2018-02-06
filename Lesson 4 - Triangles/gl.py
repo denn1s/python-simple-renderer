@@ -1,4 +1,6 @@
 import struct
+import random
+import numpy
 from obj import Obj
 from collections import namedtuple
 
@@ -6,41 +8,72 @@ from collections import namedtuple
 # Utilities
 # ===============================================================
 
-Vertex2 = namedtuple('Point', ['x', 'y'])
-Vertex3 = namedtuple('Point', ['x', 'y', 'z'])
+
+V2 = namedtuple('Point2', ['x', 'y'])
+V3 = namedtuple('Point3', ['x', 'y', 'z'])
 
 
 def sum(v0, v1):
-  return Vertex3(v0.x + v1.x, v0.y + v1.y, v0.z + v1.z)
+  return V3(v0.x + v1.x, v0.y + v1.y, v0.z + v1.z)
 
 def sub(v0, v1):
-  return Vertex3(v0.x - v1.x, v0.y - v1.y, v0.z - v1.z)
+  return V3(v0.x - v1.x, v0.y - v1.y, v0.z - v1.z)
 
 
 def mul(v0, k):
-  return Vertex3(v0.x * k, v0.y * k, v0.z *k)
+  return V3(v0.x * k, v0.y * k, v0.z *k)
 
 
-def dot(v0, v1):
+def dot3(v0, v1):
   return v0.x * v1.x + v0.y * v1.y + v0.z * v1.z
 
 
+def dot2(v0, v1):
+  return v0.x * v1.x + v0.y * v1.y
+
+
+
 def cross(v0, v1):
-  return Vertex3(
+  return V3(
     v0.y * v1.z - v0.z * v1.y,
     v0.z * v1.x - v0.x * v1.z,
     v0.x * v1.y - v0.y * v1.x,
   )
 
-def length(v0):
+def length3(v0):
   return (v0.x**2 + v0.y**2 + v0.z**2)**0.5
 
+def length2(v0):
+  return (v0.x**2 + v0.y**2)**0.5
 
-def norm(v0):
-  v0length = length(v0)
-  return Vertex3(v0.x/v0length, v0.y/v0length, v0.z/v0length)
+
+def norm2(v0):
+  v0length = length2(v0)
+
+  if not v0length:
+    return V2(0, 0)
+
+  return V2(v0.x/v0length, v0.y/v0length)
+
+
+def norm3(v0):
+  v0length = length3(v0)
+
+  if not v0length:
+    return V3(0, 0, 0)
+
+  return V3(v0.x/v0length, v0.y/v0length, v0.z/v0length)
+
+
 
 def bbox(A, B, C):
+  xs = [ A.x, B.x, C.x ]
+  ys = [ A.y, B.y, C.y ]
+
+  return V2(min(xs), min(ys)), V2(max(xs), max(ys))
+
+
+def bbox3(A, B, C):
   xs = [ A.x, B.x, C.x ]
   ys = [ A.y, B.y, C.y ]
   zs = [ A.z, B.z, C.z ]
@@ -48,64 +81,20 @@ def bbox(A, B, C):
   mins = [ min(xs), min(ys), min(zs) ]
   maxs = [ max(xs), max(ys), max(zs) ]
 
-  return mins, maxs
+  return V3(mins), V3(maxs)
 
 # import numpy
 
 def barycentric(A, B, C, P):
   bary = cross(
-    Vertex3(C.x - A.x, B.x - A.x, A.x - P.x), 
-    Vertex3(C.y - A.y, B.y - A.y, A.y - P.y)
+    V3(C.x - A.x, B.x - A.x, A.x - P.x), 
+    V3(C.y - A.y, B.y - A.y, A.y - P.y)
   )
 
+  if bary[2] <= 0:
+    return -1, 1, 1
+
   return 1 - (bary[0] + bary[1]) / bary[2], bary[1] / bary[2], bary[0] / bary[2]
-
-
-b = barycentric(Vertex2(0, 0), 
-                Vertex2(50, 50), 
-                Vertex2(100, 0), 
-                Vertex2(25, 25))
-
-print(b)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def char(c):
@@ -237,8 +226,8 @@ class Render(object):
       start: size 2 array with x,y coordinates
       end: size 2 array with x,y coordinates
     """
-    x1, y1 = start
-    x2, y2 = end
+    x1, y1 = start.x, start.y
+    x2, y2 = end.x, end.y
 
     dy = abs(y2 - y1)
     dx = abs(x2 - x1)
@@ -270,16 +259,39 @@ class Render(object):
             y += 1 if y1 < y2 else -1
             threshold += dx * 2
 
-  def triangle(self, a, b, c, color=None):
-    a = Vertex2(*a)
-    b = Vertex2(*b)
-    c = Vertex2(*c)
 
+  def triangle_wireframe(self, A, B, C, color = None):
+    r.line(A, B, color)
+    r.line(B, C, color)
+    r.line(C, A, color)
+
+
+  def triangle(self, A, B, C, color=None):
+    bbox_min, bbox_max = bbox(A, B, C)
+
+    try:
+      matrix = numpy.linalg.inv([
+        [ A.x, B.x, C.x ], 
+        [ A.y, B.y, C.y ], 
+        [ 1, 1, 1 ]
+      ])
+    except:
+      return
+
+    for x in range(bbox_min.x, bbox_max.x + 1):
+      for y in range(bbox_min.y, bbox_max.y + 1):
+        # w, v, u = barycentric(A, B, C, V3(x, y, 1))
+        w, v, u = numpy.dot(matrix, [x, y, 1])
+        if w > 0 and v > 0 and u > 0:
+          r.point(x, y, color)
+
+
+  def triangle2(self, a, b, c, color = None):
     if a.y > b.y:
         a, b = b, a
     if a.y > c.y:
         a, c = c, a
-    if b.y > c.y: 
+    if b.y > c.y:
         b, c = c, b
 
     dx_ac = c.x - a.x
@@ -290,31 +302,44 @@ class Render(object):
 
     dx_ab = b.x - a.x
     dy_ab = b.y - a.y
+
     if dy_ab != 0:
         mi_ab = dx_ab/dy_ab
-
         for y in range(a.y, b.y + 1):
-            xi = round(a.x - mi_ac * (a.y - y))
-            xf = round(a.x - mi_ab * (a.y - y))
+            xi = round(a.x - mi_ac * (a.y - y)) 
+            xf = round(a.x - mi_ab * (a.y - y)) 
+
             if xi > xf:
                 xi, xf = xf, xi
-            for x in range(xi, xf + 1):
+
+            for x in range(xi, xf):
                 r.point(x, y, color)
+
 
     dx_bc = c.x - b.x
     dy_bc = c.y - b.y
     if dy_bc:
         mi_bc = dx_bc/dy_bc
+
         for y in range(b.y, c.y + 1):
-            xi = round(a.x - mi_ac * (a.y - y))
-            xf = round(b.x - mi_bc * (b.y - y))
+            xi = round(a.x - mi_ac * (a.y - y)) 
+            xf = round(b.x - mi_bc * (b.y - y)) 
+
             if xi > xf:
                 xi, xf = xf, xi
-            for x in range(xi, xf + 1):
+
+            for x in range(xi, xf):
                 r.point(x, y, color)
 
+  def transform(self, vertex, translate=(0, 0, 0), scale=(1, 1, 1)):
+    # returns a vertex 3, translated and transformed
+    return V3(
+      round((vertex[0] + translate[0]) * scale[0]),
+      round((vertex[1] + translate[1]) * scale[1]),
+      round((vertex[2] + translate[2]) * scale[2])
+    )
     
-  def load(self, filename, translate=(0, 0), scale=(1, 1)):
+  def load(self, filename, translate=(0, 0, 0), scale=(1, 1, 1)):
     """
     Loads an obj file in the screen
     wireframe only
@@ -325,7 +350,7 @@ class Render(object):
     """
     model = Obj(filename)
 
-    import random
+    light = V3(0,0,1)
 
     for face in model.vfaces:
         vcount = len(face)
@@ -335,34 +360,60 @@ class Render(object):
           f2 = face[1][0] - 1
           f3 = face[2][0] - 1
 
-          a = [ round((v+1) * 400) for v in model.vertices[f1] ][:2]
-          b = [ round((v+1) * 400) for v in model.vertices[f2] ][:2]
-          c = [ round((v+1) * 400) for v in model.vertices[f3] ][:2]
+          a = self.transform(model.vertices[f1], translate, scale)
+          b = self.transform(model.vertices[f2], translate, scale)
+          c = self.transform(model.vertices[f3], translate, scale)
 
-          self.triangle(a, b, c, color(random.randint(0, 255),random.randint(0, 255),random.randint(0, 255)))
+          normal = norm3(cross(sub(b, a), sub(c, a)))
+          intensity = dot3(normal, light)
+          grey = round(255 * intensity)
+          if grey < 0:
+            grey = 0
+          if grey > 255:
+            grey = 255        
+          if not grey:
+            continue  
+          
+          self.triangle2(a, b, c, color(grey, grey, grey))
         else:
-          print('vcount is ', vcount)
+          # assuming 4
+          f1 = face[0][0] - 1
+          f2 = face[1][0] - 1
+          f3 = face[2][0] - 1
+          f4 = face[3][0] - 1   
 
-        """
-        for j in range(vcount):
-            f1 = face[j][0]
-            f2 = face[(j+1)%vcount][0]
+          vertices = [
+            self.transform(model.vertices[f1], translate, scale),
+            self.transform(model.vertices[f2], translate, scale),
+            self.transform(model.vertices[f3], translate, scale),
+            self.transform(model.vertices[f4], translate, scale)
+          ]
 
-            v1 = model.vertices[f1 - 1]
-            v2 = model.vertices[f2 - 1]
-
-            scaleX, scaleY = scale
-            translateX, translateY = translate
-
-            x1 = round((v1[0] + translateX) * scaleX); 
-            y1 = round((v1[1] + translateY) * scaleY); 
-            x2 = round((v2[0] + translateX) * scaleX); 
-            y2 = round((v2[1] + translateY) * scaleY); 
-      
-            self.line((x1, y1), (x2, y2))
-        """
+          normal = norm3(cross(sub(vertices[0], vertices[1]), sub(vertices[1], vertices[2])))  # no necesitamos dos normales!!
+          intensity = dot3(normal, light)
+          grey = round(255 * intensity)
+          if grey < 0:
+            grey = 0
+          if grey > 255:
+            grey = 255
+          
+          if not grey:
+            continue # dont paint this face
 
 
-# r = Render(800, 600)
-# r.load('./model.obj')
-# r.display()
+          vertices.sort(key=lambda v: v.x + v.y)
+
+          # print(vertices)
+  
+          A, B, C, D = vertices 
+          # A is smallest, D is largest
+        
+          self.triangle2(A, B, D, color(grey, grey, grey))
+          self.triangle2(A, D, C, color(grey, grey, grey))
+
+r = Render(800, 600)
+# r.load('./cube2.obj', (4, 3, 3), (100, 100, 100))
+# r.load('./bears.obj', (9, 2, 0), (40, 40, 40))
+r.load('./face.obj', (25, 5, 0), (15, 15, 15))
+# r.load('./model.obj', (1, 1, 1), (400, 400, 400))
+r.write('./out.bmp')
