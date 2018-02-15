@@ -5,96 +5,107 @@ from obj import Obj
 from collections import namedtuple
 
 # ===============================================================
-# Utilities
+# Math
 # ===============================================================
-
 
 V2 = namedtuple('Point2', ['x', 'y'])
 V3 = namedtuple('Point3', ['x', 'y', 'z'])
 
 
 def sum(v0, v1):
+  """
+    Input: 2 size 3 vectors
+    Output: Size 3 vector with the per element sum
+  """
   return V3(v0.x + v1.x, v0.y + v1.y, v0.z + v1.z)
 
 def sub(v0, v1):
+  """
+    Input: 2 size 3 vectors
+    Output: Size 3 vector with the per element substraction
+  """
   return V3(v0.x - v1.x, v0.y - v1.y, v0.z - v1.z)
 
-
 def mul(v0, k):
+  """
+    Input: 2 size 3 vectors
+    Output: Size 3 vector with the per element multiplication
+  """  
   return V3(v0.x * k, v0.y * k, v0.z *k)
 
-
-def dot3(v0, v1):
+def dot(v0, v1):
+  """
+    Input: 2 size 3 vectors
+    Output: Scalar with the dot product
+  """
   return v0.x * v1.x + v0.y * v1.y + v0.z * v1.z
 
-
-def dot2(v0, v1):
-  return v0.x * v1.x + v0.y * v1.y
-
-
-
 def cross(v0, v1):
+  """
+    Input: 2 size 3 vectors
+    Output: Size 3 vector with the cross product
+  """  
   return V3(
     v0.y * v1.z - v0.z * v1.y,
     v0.z * v1.x - v0.x * v1.z,
     v0.x * v1.y - v0.y * v1.x,
   )
 
-def length3(v0):
+def length(v0):
+  """
+    Input: 1 size 3 vector
+    Output: Scalar with the length of the vector
+  """  
   return (v0.x**2 + v0.y**2 + v0.z**2)**0.5
 
-def length2(v0):
-  return (v0.x**2 + v0.y**2)**0.5
-
-
-def norm2(v0):
-  v0length = length2(v0)
-
-  if not v0length:
-    return V2(0, 0)
-
-  return V2(v0.x/v0length, v0.y/v0length)
-
-
-def norm3(v0):
-  v0length = length3(v0)
+def norm(v0):
+  """
+    Input: 1 size 3 vector
+    Output: Size 3 vector with the normal of the vector
+  """  
+  v0length = length(v0)
 
   if not v0length:
     return V3(0, 0, 0)
 
   return V3(v0.x/v0length, v0.y/v0length, v0.z/v0length)
 
+def bbox(*vertices):
+  """
+    Input: n size 2 vectors
+    Output: 2 size 2 vectors defining the smallest bounding rectangle possible
+  """  
+  xs = [ vertex.x for vertex in vertices ]
+  ys = [ vertex.y for vertex in vertices ]
+  xs.sort()
+  ys.sort()
 
-
-def bbox(A, B, C):
-  xs = [ A.x, B.x, C.x ]
-  ys = [ A.y, B.y, C.y ]
-
-  return V2(min(xs), min(ys)), V2(max(xs), max(ys))
-
-
-def bbox3(A, B, C):
-  xs = [ A.x, B.x, C.x ]
-  ys = [ A.y, B.y, C.y ]
-  zs = [ A.z, B.z, C.z ]
-
-  mins = [ min(xs), min(ys), min(zs) ]
-  maxs = [ max(xs), max(ys), max(zs) ]
-
-  return V3(mins), V3(maxs)
-
-# import numpy
+  return V2(xs[0], ys[0]), V2(xs[-1], ys[-1])
 
 def barycentric(A, B, C, P):
+  """
+    Input: 3 size 2 vectors and a point
+    Output: 3 barycentric coordinates of the point in relation to the triangle formed
+            * returns -1, -1, -1 for degenerate triangles
+  """  
   bary = cross(
     V3(C.x - A.x, B.x - A.x, A.x - P.x), 
     V3(C.y - A.y, B.y - A.y, A.y - P.y)
   )
 
-  if bary[2] <= 0:
-    return -1, 1, 1
+  if abs(bary[2]) < 1:
+    return -1, -1, -1   # this triangle is degenerate, return anything outside
 
-  return 1 - (bary[0] + bary[1]) / bary[2], bary[1] / bary[2], bary[0] / bary[2]
+  return (
+    1 - (bary[0] + bary[1]) / bary[2], 
+    bary[1] / bary[2], 
+    bary[0] / bary[2]
+  )
+
+
+# ===============================================================
+# Utils
+# ===============================================================
 
 
 def char(c):
@@ -259,77 +270,16 @@ class Render(object):
             y += 1 if y1 < y2 else -1
             threshold += dx * 2
 
-
-  def triangle_wireframe(self, A, B, C, color = None):
-    r.line(A, B, color)
-    r.line(B, C, color)
-    r.line(C, A, color)
-
-
   def triangle(self, A, B, C, color=None):
     bbox_min, bbox_max = bbox(A, B, C)
 
-    try:
-      matrix = numpy.linalg.inv([
-        [ A.x, B.x, C.x ], 
-        [ A.y, B.y, C.y ], 
-        [ 1, 1, 1 ]
-      ])
-    except:
-      return
-
     for x in range(bbox_min.x, bbox_max.x + 1):
       for y in range(bbox_min.y, bbox_max.y + 1):
-        # w, v, u = barycentric(A, B, C, V3(x, y, 1))
-        w, v, u = numpy.dot(matrix, [x, y, 1])
-        if w > 0 and v > 0 and u > 0:
-          r.point(x, y, color)
-
-
-  def triangle2(self, a, b, c, color = None):
-    if a.y > b.y:
-        a, b = b, a
-    if a.y > c.y:
-        a, c = c, a
-    if b.y > c.y:
-        b, c = c, b
-
-    dx_ac = c.x - a.x
-    dy_ac = c.y - a.y
-    if dy_ac == 0:
-        return
-    mi_ac = dx_ac/dy_ac
-
-    dx_ab = b.x - a.x
-    dy_ab = b.y - a.y
-
-    if dy_ab != 0:
-        mi_ab = dx_ab/dy_ab
-        for y in range(a.y, b.y + 1):
-            xi = round(a.x - mi_ac * (a.y - y)) 
-            xf = round(a.x - mi_ab * (a.y - y)) 
-
-            if xi > xf:
-                xi, xf = xf, xi
-
-            for x in range(xi, xf):
-                r.point(x, y, color)
-
-
-    dx_bc = c.x - b.x
-    dy_bc = c.y - b.y
-    if dy_bc:
-        mi_bc = dx_bc/dy_bc
-
-        for y in range(b.y, c.y + 1):
-            xi = round(a.x - mi_ac * (a.y - y)) 
-            xf = round(b.x - mi_bc * (b.y - y)) 
-
-            if xi > xf:
-                xi, xf = xf, xi
-
-            for x in range(xi, xf):
-                r.point(x, y, color)
+        w, v, u = barycentric(A, B, C, V2(x, y))
+        if w < 0 or v < 0 or u < 0:  # 0 is actually a valid value! (it is on the edge)
+          continue
+        
+        self.point(x, y, color)
 
   def transform(self, vertex, translate=(0, 0, 0), scale=(1, 1, 1)):
     # returns a vertex 3, translated and transformed
@@ -364,17 +314,13 @@ class Render(object):
           b = self.transform(model.vertices[f2], translate, scale)
           c = self.transform(model.vertices[f3], translate, scale)
 
-          normal = norm3(cross(sub(b, a), sub(c, a)))
-          intensity = dot3(normal, light)
+          normal = norm(cross(sub(b, a), sub(c, a)))
+          intensity = dot(normal, light)
           grey = round(255 * intensity)
           if grey < 0:
-            grey = 0
-          if grey > 255:
-            grey = 255        
-          if not grey:
             continue  
           
-          self.triangle2(a, b, c, color(grey, grey, grey))
+          self.triangle(a, b, c, color(grey, grey, grey))
         else:
           # assuming 4
           f1 = face[0][0] - 1
@@ -389,31 +335,17 @@ class Render(object):
             self.transform(model.vertices[f4], translate, scale)
           ]
 
-          normal = norm3(cross(sub(vertices[0], vertices[1]), sub(vertices[1], vertices[2])))  # no necesitamos dos normales!!
-          intensity = dot3(normal, light)
+          normal = norm(cross(sub(vertices[0], vertices[1]), sub(vertices[1], vertices[2])))  # no necesitamos dos normales!!
+          intensity = dot(normal, light)
           grey = round(255 * intensity)
           if grey < 0:
-            grey = 0
-          if grey > 255:
-            grey = 255
-          
-          if not grey:
             continue # dont paint this face
 
-
-          vertices.sort(key=lambda v: v.x + v.y)
-
-          # print(vertices)
+          # vertices are ordered, no need to sort!
+          # vertices.sort(key=lambda v: v.x + v.y)
   
           A, B, C, D = vertices 
-          # A is smallest, D is largest
         
-          self.triangle2(A, B, D, color(grey, grey, grey))
-          self.triangle2(A, D, C, color(grey, grey, grey))
+          self.triangle(A, B, C, color(grey, grey, grey))
+          self.triangle(A, C, D, color(grey, grey, grey))
 
-r = Render(800, 600)
-# r.load('./cube2.obj', (4, 3, 3), (100, 100, 100))
-# r.load('./bears.obj', (9, 2, 0), (40, 40, 40))
-r.load('./face.obj', (25, 5, 0), (15, 15, 15))
-# r.load('./model.obj', (1, 1, 1), (400, 400, 400))
-r.write('./out.bmp')
