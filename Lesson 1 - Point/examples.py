@@ -9,7 +9,7 @@ def single_point():
     """
     r = Render(800, 600)
     r.point(10, 590)
-    r.write('out.bmp')
+    r.display('out.bmp')
 
 
 def square():
@@ -36,7 +36,7 @@ def square():
             r.point(square_w, y)
             r.point(padding, y)
 
-    r.write('out.bmp')
+    r.display('out.bmp')
 
 
 
@@ -54,7 +54,7 @@ def diagonal():
             if x == y:
                 r.point(x, y)
 
-    r.write('out.bmp')
+    r.display('out.bmp')
 
 
 def static():
@@ -71,7 +71,7 @@ def static():
             if random.random() > 0.5:  # 50/50 chance
                 r.point(x, y)
 
-    r.write('out.bmp')
+    r.display('out.bmp')
 
 
 def color_static():
@@ -91,7 +91,7 @@ def color_static():
                 random.randint(0, 255)
             ))
 
-    r.write('out.bmp')
+    r.display('out.bmp')
 
 
 def stars():
@@ -137,7 +137,7 @@ def stars():
             if random.random() < 0.001:  # 0.1% only 0.1 chance of actually rendering a star 
                 star(x + 2, y + 2, random.randint(1, 3))
 
-    r.write('out.bmp')    
+    r.display('out.bmp')    
 
 
 if __name__ == "__main__":

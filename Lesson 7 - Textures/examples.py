@@ -1,27 +1,16 @@
 import sys
 import random
 from gl import Render
+from obj import Texture
 
-
-def cube():
+def model():
     """
     Draws a cube at an angle so it is more interesting
     """
     r = Render(800, 600)
-    r.load('./cube2.obj', (4, 3, 3), (100, 100, 100))
-    # r.display()
-    r.write('out.bmp')
-
-
-def bears():
-    """
-    Draws some bears on top of each other (doesn't work)
-    """
-    r = Render(800, 600)
-    r.load('./bears.obj', (9, 2, 0), (40, 40, 40))
-    # r.display()
-    r.write('out.bmp')
-
+    t = Texture('./models/model.bmp')
+    r.load('./models/model.obj', (1, 1, 1), (300, 300, 300), texture=t)
+    r.display('out.bmp')
 
 def face():
     """
@@ -29,24 +18,18 @@ def face():
     """
     r = Render(800, 600)
     r.load('./face.obj', (25, 5, 0), (15, 15, 15))
-    # r.display()
-    r.write('out.bmp')
+    r.display('out.bmp')
 
 
 if __name__ == "__main__":
     example = sys.argv[1] if len(sys.argv) > 1 else ""
 
-    elif example == "cube":
-        cube()
-    elif example == "bears":
-        bears()
+    if example == "model":
+        model()
     elif example == "face":
         face()
     else:
         print("Usage: python3 examples.py <example>")
         print("\nExample can be one of:\n")
-        print("simple_cube: ", simple_cube.__doc__)
-        print("cube: ", cube.__doc__)
-        print("bears: ", bears.__doc__)
         print("face: ", face.__doc__)
         

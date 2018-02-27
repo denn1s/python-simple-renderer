@@ -210,18 +210,20 @@ class Render(object):
 
     f.close()
 
-  def display(self):
+  def display(self, filename='out.bmp'):
     """
     Displays the image, a external library (wand) is used, but only for convenience during development
     """
-    filename = 'out.bmp'
     self.write(filename)
 
-    from wand.image import Image
-    from wand.display import display
+    try:
+      from wand.image import Image
+      from wand.display import display
 
-    with Image(filename=filename) as image:
-      display(image)
+      with Image(filename=filename) as image:
+        display(image)
+    except ImportError:
+      pass  # do nothing if no wand is installed
 
   def set_color(self, color):
     self.current_color = color
@@ -233,46 +235,6 @@ class Render(object):
     except:
       # To avoid index out of range exceptions
       pass
-    
-  def line(self, start, end, color = None):
-    """
-    Draws a line in the screen.
-    Input: 
-      start: size 2 array with x,y coordinates
-      end: size 2 array with x,y coordinates
-    """
-    x1, y1 = round(start.x * 1024), round(start.y * 1024)
-    x2, y2 = round(end.x * 1024), round(end.y * 1024)
-
-    dy = abs(y2 - y1)
-    dx = abs(x2 - x1)
-    steep = dy > dx
-
-    if steep:
-        x1, y1 = y1, x1
-        x2, y2 = y2, x2
-
-    if x1 > x2:
-        x1, x2 = x2, x1
-        y1, y2 = y2, y1
-
-    dy = abs(y2 - y1)
-    dx = abs(x2 - x1)
-
-    offset = 0
-    threshold = dx
-
-    y = y1
-    for x in range(x1, x2 + 1):
-        if steep:
-            self.point(y, x, color)
-        else:
-            self.point(x, y, color)
-        
-        offset += dy * 2
-        if offset >= threshold:
-            y += 1 if y1 < y2 else -1
-            threshold += dx * 2
 
   def triangle(self, A, B, C, color=None, texture=None, texture_coords=(), intensity=1):
     bbox_min, bbox_max = bbox(A, B, C)
@@ -292,7 +254,7 @@ class Render(object):
 
         z = A.z * w + B.z * v + C.z * u
 
-        if z > self.zbuffer[x][y]:
+        if x < len(self.zbuffer) and y < len(self.zbuffer[x]) and z > self.zbuffer[x][y]:
           self.point(x, y, color)
           self.zbuffer[x][y] = z
 

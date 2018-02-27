@@ -9,7 +9,7 @@ def single_line():
     """
     r = Render(800, 600)
     r.line((10, 10),  (510, 10))
-    r.write('out.bmp')
+    r.display('out.bmp')
 
 
 def multi_line():
@@ -37,7 +37,7 @@ def multi_line():
     r.line((790, 10), (446, 354))
     r.line((790, 10), (338, 191))
     r.line((790, 10), (290, 10))
-    r.write('out.bmp')
+    r.display('out.bmp')
 
 
 def cube():
@@ -61,7 +61,7 @@ def cube():
     r.line((200, 100), (250, 150))
     r.line((200, 200), (250, 250))
 
-    r.write('out.bmp')
+    r.display('out.bmp')
 
 
 def isometric_cube():
@@ -80,7 +80,7 @@ def isometric_cube():
     r.line((287, 350), (200, 400))
     r.line((113, 350), (200, 400))
 
-    r.write('out.bmp')
+    r.display('out.bmp')
 
 
 if __name__ == "__main__":

@@ -8,9 +8,9 @@ def simple_cube():
     Draws a cube, but an orthogonal cube, so a square
     """
     r = Render(800, 600)
-    r.load('./cube.obj', (4, 3), (100, 100))
+    r.load('./models/cube.obj', (4, 3), (100, 100))
     # r.display()
-    r.write('out.bmp')
+    r.display('out.bmp')
 
 
 def cube():
@@ -18,9 +18,9 @@ def cube():
     Draws a cube at an angle so it is more interesting
     """
     r = Render(800, 600)
-    r.load('./cube2.obj', (4, 3), (100, 100))
+    r.load('./models/cube2.obj', (4, 3), (100, 100))
     # r.display()
-    r.write('out.bmp')
+    r.display('out.bmp')
 
 
 def bears():
@@ -28,9 +28,9 @@ def bears():
     Draws some bears on top of each other
     """
     r = Render(800, 600)
-    r.load('./bears.obj', (9, 2), (40, 40))
+    r.load('./models/bears.obj', (9, 2), (40, 40))
     # r.display()
-    r.write('out.bmp')
+    r.display('out.bmp')
 
 
 def face():
@@ -38,9 +38,9 @@ def face():
     Draws a cute face, but in wireframe it just looks creepy
     """
     r = Render(800, 600)
-    r.load('./face.obj', (25, 5), (15, 15))
+    r.load('./models/face.obj', (25, 5), (15, 15))
     r.display()
-    r.write('out.bmp')
+    r.display('out.bmp')
 
 
 if __name__ == "__main__":

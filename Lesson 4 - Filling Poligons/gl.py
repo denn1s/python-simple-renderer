@@ -82,27 +82,6 @@ def bbox(*vertices):
 
   return V2(xs[0], ys[0]), V2(xs[-1], ys[-1])
 
-def barycentric(A, B, C, P):
-  """
-    Input: 3 size 2 vectors and a point
-    Output: 3 barycentric coordinates of the point in relation to the triangle formed
-            * returns -1, -1, -1 for degenerate triangles
-  """  
-  bary = cross(
-    V3(C.x - A.x, B.x - A.x, A.x - P.x), 
-    V3(C.y - A.y, B.y - A.y, A.y - P.y)
-  )
-
-  if abs(bary[2]) < 1:
-    return -1, -1, -1   # this triangle is degenerate, return anything outside
-
-  return (
-    1 - (bary[0] + bary[1]) / bary[2], 
-    bary[1] / bary[2], 
-    bary[0] / bary[2]
-  )
-
-
 # ===============================================================
 # Utils
 # ===============================================================
@@ -206,18 +185,20 @@ class Render(object):
 
     f.close()
 
-  def display(self):
+  def display(self, filename='out.bmp'):
     """
     Displays the image, a external library (wand) is used, but only for convenience during development
     """
-    filename = 'out.bmp'
     self.write(filename)
 
-    from wand.image import Image
-    from wand.display import display
+    try:
+      from wand.image import Image
+      from wand.display import display
 
-    with Image(filename=filename) as image:
-      display(image)
+      with Image(filename=filename) as image:
+        display(image)
+    except ImportError:
+      pass  # do nothing if no wand is installed
 
   def set_color(self, color):
     self.current_color = color
@@ -271,15 +252,50 @@ class Render(object):
             threshold += dx * 2
 
   def triangle(self, A, B, C, color=None):
-    bbox_min, bbox_max = bbox(A, B, C)
+    if A.y > B.y:
+      A, B = B, A
+    if A.y > C.y:
+      A, C = C, A
+    if B.y > C.y: 
+      B, C = C, B
 
-    for x in range(bbox_min.x, bbox_max.x + 1):
-      for y in range(bbox_min.y, bbox_max.y + 1):
-        w, v, u = barycentric(A, B, C, V2(x, y))
-        if w < 0 or v < 0 or u < 0:  # 0 is actually a valid value! (it is on the edge)
-          continue
-        
-        self.point(x, y, color)
+    dx_ac = C.x - A.x
+    dy_ac = C.y - A.y
+    if dy_ac == 0:
+        return
+    mi_ac = dx_ac/dy_ac
+
+    dx_ab = B.x - A.x
+    dy_ab = B.y - A.y
+    if dy_ab != 0:
+        mi_ab = dx_ab/dy_ab
+
+        for y in range(A.y, B.y + 1):
+            xi = round(A.x - mi_ac * (A.y - y))
+            xf = round(A.x - mi_ab * (A.y - y))
+
+            if xi > xf:
+                xi, xf = xf, xi
+            for x in range(xi, xf + 1):
+                self.point(x, y, color)
+
+    dx_bc = C.x - B.x
+    dy_bc = C.y - B.y
+    if dy_bc:
+        mi_bc = dx_bc/dy_bc
+
+        # dacx = C.x - A.x
+        # dacy = C.y - A.y
+        # miac = dacx/dacy  // we have mi_ac already!
+
+        for y in range(B.y, C.y + 1):
+            xi = round(A.x - mi_ac * (A.y - y))
+            xf = round(B.x - mi_bc * (B.y - y))
+
+            if xi > xf:
+                xi, xf = xf, xi
+            for x in range(xi, xf + 1):
+                self.point(x, y, color)
 
   def transform(self, vertex, translate=(0, 0, 0), scale=(1, 1, 1)):
     # returns a vertex 3, translated and transformed
