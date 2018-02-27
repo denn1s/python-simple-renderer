@@ -103,18 +103,21 @@ class Render(object):
 
     f.close()
 
-  def display(self):
+  def display(self, filename='out.bmp'):
     """
     Displays the image, a external library (wand) is used, but only for convenience during development
     """
-    filename = 'out.bmp'
     self.write(filename)
 
-    from wand.image import Image
-    from wand.display import display
+    try:
+      from wand.image import Image
+      from wand.display import display
 
-    with Image(filename=filename) as image:
-      display(image)
+      with Image(filename=filename) as image:
+        display(image)
+    except ImportError:
+      pass  # do nothing if no wand is installed
+
 
   def set_color(self, color):
     self.current_color = color
