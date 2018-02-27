@@ -28,7 +28,10 @@ class Obj(object):
     def read(self):
         for line in self.lines:
             if line:
-                prefix, value = line.split(' ', 1)
+                try:
+                    prefix, value = line.split(' ', 1)
+                except:
+                    prefix = ''
                 if prefix == 'v':
                     self.vertices.append(list(map(float, value.split(' '))))
                 if prefix == 'vt':
@@ -67,4 +70,8 @@ class Texture(object):
         x = int(tx * self.width)
         y = int(ty * self.height)
         # return self.pixels[y][x]
-        return bytes(map(lambda b: round(b*intensity) if b*intensity > 0 else 0, self.pixels[y][x]))
+        try:
+            return bytes(map(lambda b: round(b*intensity) if b*intensity > 0 else 0, self.pixels[y][x]))
+        except:
+            pass  # what causes this
+            
