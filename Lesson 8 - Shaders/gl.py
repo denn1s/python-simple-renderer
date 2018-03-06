@@ -1,6 +1,6 @@
 import struct
 import random
-import numpy
+import numpy as np
 from obj import Obj, Texture
 from collections import namedtuple
 
@@ -63,6 +63,7 @@ def norm(v0):
     Input: 1 size 3 vector
     Output: Size 3 vector with the normal of the vector
   """  
+  v0 = V3(*v0)
   v0length = length(v0)
 
   if not v0length:
@@ -100,6 +101,14 @@ def barycentric(A, B, C, P):
     1 - (bary[0] + bary[1]) / bary[2], 
     bary[1] / bary[2], 
     bary[0] / bary[2]
+  )
+
+def ndc(point):
+  point = V3(*point)
+  return V3(
+    point.x / point.z,
+    point.y / point.z,
+    point.z / point.z
   )
 
 
@@ -239,7 +248,7 @@ class Render(object):
       # To avoid index out of range exceptions
       pass
 
-  def triangle(self, A, B, C, color=None, texture_coords=(), varying_intensity=()):
+  def triangle(self, A, B, C, color=None, texture_coords=(), varying_normals=()):
     bbox_min, bbox_max = bbox(A, B, C)
 
     for x in range(bbox_min.x, bbox_max.x + 1):
@@ -248,18 +257,46 @@ class Render(object):
         if w < 0 or v < 0 or u < 0:  # 0 is actually a valid value! (it is on the edge)
           continue
         
-        if self.texture:
-          tA, tB, tC = texture_coords
-          tx = tA.x * w + tB.x * v + tC.x * u
-          ty = tA.y * w + tB.y * v + tC.y * u
-          color = self.texture.get_color(tx, ty)
-          intensity = dot(V3(*varying_intensity), V3(w, v, u))
-          point_normal = self.normalmap.get_normal(tx, ty)
-          intensity2 = dot(V3(*point_normal), self.light)
+        tA, tB, tC = texture_coords
+        tx = tA.x * w + tB.x * v + tC.x * u
+        ty = tA.y * w + tB.y * v + tC.y * u
+        color = self.texture.get_color(tx, ty)
+        point_normal = self.normalmap.get_normal(tx, ty)
 
-          
-          color = self.shader(color, intensity)
-          # color = self.shader(color, (intensity + intensity2)/2)
+
+        n = norm(np.dot(varying_normals, (w, v, u)))
+
+        try:
+          invA = np.linalg.inv(np.array([
+            sub(B, A), 
+            sub(C, A),
+            n
+          ]))
+
+          i = norm(np.dot(invA, [
+            tB.x - tA.x,
+            tC.x - tA.x,
+            0
+          ]))
+
+          j = norm(np.dot(invA, [
+            tB.y - tA.y,
+            tC.y - tA.y,
+            0
+          ]))
+          # matB = [i, j, n]
+          matB = [
+            [i.x, j.x, n.x],
+            [i.y, j.y, n.y],
+            [i.z, j.z, n.z]
+          ]
+          normal = norm(np.dot(matB, point_normal))
+          intensity = float(dot(normal, self.light))
+        except np.linalg.linalg.LinAlgError as e: 
+          print("Singular Matrix", e)
+          intensity = 1
+
+        color = self.shader(color, intensity)
 
         z = A.z * w + B.z * v + C.z * u
 
@@ -303,25 +340,21 @@ class Render(object):
           b = self.transform(model.vertices[f2], translate, scale)
           c = self.transform(model.vertices[f3], translate, scale)
 
-          # load info for the vertex shader
           n1 = face[0][2] - 1
           n2 = face[1][2] - 1
           n3 = face[2][2] - 1      
-          iA = dot(V3(*model.normals[n1]), self.light)  # intensity at point A
-          iB = dot(V3(*model.normals[n2]), self.light)  # these 3 are scalars
-          iC = dot(V3(*model.normals[n3]), self.light)
+          nA = V3(*model.normals[n1])
+          nB = V3(*model.normals[n2])
+          nC = V3(*model.normals[n3])
 
-          if not texture:
-            self.triangle(a, b, c, WHITE, varying_intensity=(iA, iB, iC))
-          else:
-            t1 = face[0][1] - 1
-            t2 = face[1][1] - 1
-            t3 = face[2][1] - 1
-            tA = V3(*model.tvertices[t1])
-            tB = V3(*model.tvertices[t2])
-            tC = V3(*model.tvertices[t3])
+          t1 = face[0][1] - 1
+          t2 = face[1][1] - 1
+          t3 = face[2][1] - 1
+          tA = V3(*model.tvertices[t1])
+          tB = V3(*model.tvertices[t2])
+          tC = V3(*model.tvertices[t3])
 
-            self.triangle(a, b, c, texture_coords=(tA, tB, tC), varying_intensity=(iA, iB, iC))
+          self.triangle(a, b, c, texture_coords=(tA, tB, tC), varying_normals=(nA, nB, nC))
           
         else:
           # assuming 4
