@@ -70,3 +70,40 @@ class Texture(object):
         x = int(tx * self.width)
         y = int(ty * self.height)
         return self.pixels[y][x]
+
+
+class NormalMap(object):
+    def __init__(self, path):
+        self.path = path
+        self.read()
+
+    def read(self):
+        image = open(self.path, "rb")
+        # we ignore all the header stuff
+        image.seek(2 + 4 + 4)  # skip BM, skip bmp size, skip zeros
+        header_size = struct.unpack("=l", image.read(4))[0]  # read header size
+        image.seek(2 + 4 + 4 + 4 + 4)
+        
+        self.width = struct.unpack("=l", image.read(4))[0]  # read width
+        self.height = struct.unpack("=l", image.read(4))[0]  # read width
+        self.pixels = []
+        image.seek(header_size)
+        for y in range(self.height):
+            self.pixels.append([])
+            for x in range(self.width):
+                z_ = ord(image.read(1))
+                y_ = ord(image.read(1))
+                x_ = ord(image.read(1))
+                self.pixels[y].append([x_, y_, z_])
+        image.close()
+
+    def get_normal(self, tx, ty):
+        x = int(tx * self.width)
+        y = int(ty * self.height)
+        color = self.pixels[y][x]
+        normal = [0, 0, 0]
+        normal[0] = (color[0] / 128) - 1
+        normal[1] = (color[1] / 128) - 1
+        normal[2] = (color[2] / 256)
+        return normal
+

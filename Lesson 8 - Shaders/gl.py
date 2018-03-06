@@ -171,6 +171,7 @@ class Render(object):
     self.clear()
     self.texture = None
     self.shader = None
+    self.normalmap = None
 
   def clear(self):
     self.pixels = [
@@ -252,10 +253,13 @@ class Render(object):
           tx = tA.x * w + tB.x * v + tC.x * u
           ty = tA.y * w + tB.y * v + tC.y * u
           color = self.texture.get_color(tx, ty)
-
-        if varying_intensity:
           intensity = dot(V3(*varying_intensity), V3(w, v, u))
+          point_normal = self.normalmap.get_normal(tx, ty)
+          intensity2 = dot(V3(*point_normal), self.light)
+
+          
           color = self.shader(color, intensity)
+          # color = self.shader(color, (intensity + intensity2)/2)
 
         z = A.z * w + B.z * v + C.z * u
 
@@ -271,7 +275,8 @@ class Render(object):
       round((vertex[2] + translate[2]) * scale[2])
     )
     
-  def load(self, filename, translate=(0, 0, 0), scale=(1, 1, 1), texture=None, shader=None):
+  def load(self, filename, translate=(0, 0, 0), scale=(1, 1, 1), 
+            texture=None, shader=None, normalmap=None):
     """
     Loads an obj file in the screen
     Input: 
@@ -281,9 +286,10 @@ class Render(object):
       texture: texture file to use
     """
     model = Obj(filename)
-    light = V3(0,0,1)
+    self.light = V3(0,0,1)
     self.texture = texture
     self.shader = shader
+    self.normalmap = normalmap
 
     for face in model.faces:
         vcount = len(face)
@@ -301,9 +307,9 @@ class Render(object):
           n1 = face[0][2] - 1
           n2 = face[1][2] - 1
           n3 = face[2][2] - 1      
-          iA = dot(V3(*model.normals[n1]), light)  # intensity at point A
-          iB = dot(V3(*model.normals[n2]), light)  # these 3 are scalars
-          iC = dot(V3(*model.normals[n3]), light)
+          iA = dot(V3(*model.normals[n1]), self.light)  # intensity at point A
+          iB = dot(V3(*model.normals[n2]), self.light)  # these 3 are scalars
+          iC = dot(V3(*model.normals[n3]), self.light)
 
           if not texture:
             self.triangle(a, b, c, WHITE, varying_intensity=(iA, iB, iC))
