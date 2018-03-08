@@ -257,7 +257,9 @@ class Render(object):
         if w < 0 or v < 0 or u < 0:  # 0 is actually a valid value! (it is on the edge)
           continue
         
-        color = self.shader(self, bar=(w, v, u),
+        color = self.shader(self,
+            triangle=(A, B, C),
+            bar=(w, v, u),
             varying_normals=varying_normals,
             texture_coords=texture_coords)
 
