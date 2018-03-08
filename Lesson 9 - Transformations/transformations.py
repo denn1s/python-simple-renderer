@@ -1,7 +1,6 @@
 import numpy as np
 from gl import *
 
-
 points = [
   (165, 380), (185, 360), (180, 330), (207, 345), (233, 330), (230, 360), (250, 380), (220, 385), (205, 410), (193, 383)
 ]
@@ -56,16 +55,6 @@ for point in points:
  
 print(transformed_points)
 
-
-
-
-
-
-
-
-
-
-
 prev_point = points[-1]
 for point in points:
   r.line(prev_point, point, color(255, 255, 0))
@@ -75,9 +64,6 @@ prev_point = transformed_points[-1]
 for point in transformed_points:
   r.line(prev_point, point, WHITE)
   prev_point = point
-
-
-
 
 r.display('out.bmp')
 
