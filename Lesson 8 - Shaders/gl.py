@@ -257,46 +257,9 @@ class Render(object):
         if w < 0 or v < 0 or u < 0:  # 0 is actually a valid value! (it is on the edge)
           continue
         
-        tA, tB, tC = texture_coords
-        tx = tA.x * w + tB.x * v + tC.x * u
-        ty = tA.y * w + tB.y * v + tC.y * u
-        color = self.texture.get_color(tx, ty)
-        point_normal = self.normalmap.get_normal(tx, ty)
-
-
-        n = norm(np.dot(varying_normals, (w, v, u)))
-
-        try:
-          invA = np.linalg.inv(np.array([
-            sub(B, A), 
-            sub(C, A),
-            n
-          ]))
-
-          i = norm(np.dot(invA, [
-            tB.x - tA.x,
-            tC.x - tA.x,
-            0
-          ]))
-
-          j = norm(np.dot(invA, [
-            tB.y - tA.y,
-            tC.y - tA.y,
-            0
-          ]))
-          # matB = [i, j, n]
-          matB = [
-            [i.x, j.x, n.x],
-            [i.y, j.y, n.y],
-            [i.z, j.z, n.z]
-          ]
-          normal = norm(np.dot(matB, point_normal))
-          intensity = float(dot(normal, self.light))
-        except np.linalg.linalg.LinAlgError as e: 
-          print("Singular Matrix", e)
-          intensity = 1
-
-        color = self.shader(color, intensity)
+        color = self.shader(self, bar=(w, v, u),
+            varying_normals=varying_normals,
+            texture_coords=texture_coords)
 
         z = A.z * w + B.z * v + C.z * u
 
