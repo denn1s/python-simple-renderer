@@ -28,7 +28,7 @@ def sub(v0, v1):
 
 def mul(v0, k):
   """
-    Input: 2 size 3 vectors
+    Input: 1 size 3 vector and a scakar
     Output: Size 3 vector with the per element multiplication
   """  
   return V3(v0.x * k, v0.y * k, v0.z *k)
@@ -313,12 +313,60 @@ class Render(object):
           self.zbuffer[x][y] = z
 
   def transform(self, vertex, translate=(0, 0, 0), scale=(1, 1, 1)):
-    # returns a vertex 3, translated and transformed
+    Model = np.matrix([
+      [1, 0, 0, 0],
+      [0, 1, 0, 0],
+      [0, 0, 1, 0],
+      [0, 0, 0, 1]
+    ]) # transforms object coordinates to world coordinates
+
+    View = self.View
+      # transforms model coordinates to eye coordinates
+    Projection = self.Projection  # deforma la escena para crear una proyección (clip coordinates)
+    
+    Viewport = np.matrix([
+      [200, 0, 0, 400],
+      [0, 200, 0, 300],
+      [0, 0, 180, 180],
+      [0, 0, 0, 1]
+    ])   # transforms clip coordinates to screen coordinates
+
+    augmented_vertex = [
+      vertex.x,
+      vertex.y,
+      vertex.z,
+      1
+    ]
+
+    transformed_vertex = np.dot(
+      Viewport @ Projection @ View @ Model,
+      augmented_vertex
+    ).tolist()[0]
+
     return V3(
-      round((vertex[0] + translate[0]) * scale[0]),
-      round((vertex[1] + translate[1]) * scale[1]),
-      round((vertex[2] + translate[2]) * scale[2])
+      round(transformed_vertex[0]),
+      round(transformed_vertex[1]),
+      round(transformed_vertex[2])
     )
+
+  def lookAt(self, eye, center, up):
+    z = norm(sub(eye, center))
+    x = norm(cross(up, z))
+    y = norm(cross(z, x))
+
+    self.View = np.matrix([
+      [x.x, x.y, x.z, -center.x],
+      [y.x, y.y, y.z, -center.y],
+      [z.x, z.y, z.z, -center.z],
+      [0, 0, 0, 1]
+    ])
+
+    self.Projection = np.matrix([
+      [1, 0, 0, 0],
+      [0, 1, 0, 0],
+      [0, 0, 1, 0],
+      [0, 0, 0, 1]
+    ])
     
   def load(self, filename, translate=(0, 0, 0), scale=(1, 1, 1), 
             texture=None, shader=None, normalmap=None):
@@ -344,9 +392,9 @@ class Render(object):
           f2 = face[1][0] - 1
           f3 = face[2][0] - 1
 
-          a = self.transform(model.vertices[f1], translate, scale)
-          b = self.transform(model.vertices[f2], translate, scale)
-          c = self.transform(model.vertices[f3], translate, scale)
+          a = self.transform(V3(*model.vertices[f1]), translate, scale)
+          b = self.transform(V3(*model.vertices[f2]), translate, scale)
+          c = self.transform(V3(*model.vertices[f3]), translate, scale)
 
           n1 = face[0][2] - 1
           n2 = face[1][2] - 1
