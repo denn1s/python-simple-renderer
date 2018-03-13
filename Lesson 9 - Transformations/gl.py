@@ -313,23 +313,10 @@ class Render(object):
           self.zbuffer[x][y] = z
 
   def transform(self, vertex, translate=(0, 0, 0), scale=(1, 1, 1)):
-    Model = np.matrix([
-      [1, 0, 0, 0],
-      [0, 1, 0, 0],
-      [0, 0, 1, 0],
-      [0, 0, 0, 1]
-    ]) # transforms object coordinates to world coordinates
-
-    View = self.View
-      # transforms model coordinates to eye coordinates
-    Projection = self.Projection  # deforma la escena para crear una proyección (clip coordinates)
     
-    Viewport = np.matrix([
-      [200, 0, 0, 400],
-      [0, 200, 0, 300],
-      [0, 0, 180, 180],
-      [0, 0, 0, 1]
-    ])   # transforms clip coordinates to screen coordinates
+    View = self.View  # transforms model coordinates to eye coordinates
+    Projection = self.Projection  # deforma la escena para crear una proyección (clip coordinates)
+    Viewport = self.ViewPort  # transforms clip coordinates to screen coordinates
 
     augmented_vertex = [
       vertex.x,
@@ -339,14 +326,14 @@ class Render(object):
     ]
 
     transformed_vertex = np.dot(
-      Viewport @ Projection @ View @ Model,
+      Viewport @ Projection @ View,
       augmented_vertex
     ).tolist()[0]
 
     return V3(
-      round(transformed_vertex[0]),
-      round(transformed_vertex[1]),
-      round(transformed_vertex[2])
+      round(transformed_vertex[0] / transformed_vertex[3]),
+      round(transformed_vertex[1] / transformed_vertex[3]),
+      round(transformed_vertex[2] / transformed_vertex[3])
     )
 
   def lookAt(self, eye, center, up):
@@ -361,10 +348,22 @@ class Render(object):
       [0, 0, 0, 1]
     ])
 
+    self.projection(-1/(length(sub(eye, center))))
+    self.viewport()
+
+  def projection(self, coeff):
     self.Projection = np.matrix([
       [1, 0, 0, 0],
       [0, 1, 0, 0],
       [0, 0, 1, 0],
+      [0, 0, coeff, 1]
+    ])
+
+  def viewport(self):
+    self.ViewPort = np.matrix([
+      [200, 0, 0, 400],
+      [0, 200, 0, 300],
+      [0, 0, 128, 128],
       [0, 0, 0, 1]
     ])
     
@@ -379,7 +378,7 @@ class Render(object):
       texture: texture file to use
     """
     model = Obj(filename)
-    self.light = V3(0,0,1)
+    self.light = norm(self.light)
     self.texture = texture
     self.shader = shader
     self.normalmap = normalmap
