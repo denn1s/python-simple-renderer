@@ -19,9 +19,10 @@ def gourad(render, bar, **kwargs):
 
 r = Render(800, 600)
 t = Texture('./models/model.bmp')
-
 r.light = V3(0, 0, 1)
-r.lookAt(V3(100, 1, 3), V3(0, 0, 0), V3(0, 1, 0))
+
+r.lookAt(V3(10, 1, 3), V3(0, 0, 0), V3(0, 1, 0))
+
 
 r.load('./models/model.obj', texture=t, shader=gourad)
 r.display('out.bmp')

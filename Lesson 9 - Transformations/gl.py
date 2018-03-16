@@ -312,61 +312,33 @@ class Render(object):
           self.point(x, y, color)
           self.zbuffer[x][y] = z
 
-  def transform(self, vertex, translate=(0, 0, 0), scale=(1, 1, 1)):
-    
-    View = self.View  # transforms model coordinates to eye coordinates
-    Projection = self.Projection  # deforma la escena para crear una proyección (clip coordinates)
-    Viewport = self.ViewPort  # transforms clip coordinates to screen coordinates
 
+  def transform(self, vertex, translate=(0, 0, 0), scale=(1, 1, 1)):
     augmented_vertex = [
       vertex.x,
       vertex.y,
       vertex.z,
       1
     ]
-
-    transformed_vertex = np.dot(
-      Viewport @ Projection @ View,
+    tranformed_vertex = np.dot(
+      self.ViewPort @ self.Projection @ self.View,
       augmented_vertex
     ).tolist()[0]
 
     return V3(
-      round(transformed_vertex[0] / transformed_vertex[3]),
-      round(transformed_vertex[1] / transformed_vertex[3]),
-      round(transformed_vertex[2] / transformed_vertex[3])
+      round(tranformed_vertex[0]/tranformed_vertex[3]),
+      round(tranformed_vertex[1]/tranformed_vertex[3]),
+      round(tranformed_vertex[2]/tranformed_vertex[3])
     )
 
-  def lookAt(self, eye, center, up):
-    z = norm(sub(eye, center))
-    x = norm(cross(up, z))
-    y = norm(cross(z, x))
 
-    self.View = np.matrix([
-      [x.x, x.y, x.z, -center.x],
-      [y.x, y.y, y.z, -center.y],
-      [z.x, z.y, z.z, -center.z],
-      [0, 0, 0, 1]
-    ])
 
-    self.projection(-1/(length(sub(eye, center))))
-    self.viewport()
 
-  def projection(self, coeff):
-    self.Projection = np.matrix([
-      [1, 0, 0, 0],
-      [0, 1, 0, 0],
-      [0, 0, 1, 0],
-      [0, 0, coeff, 1]
-    ])
 
-  def viewport(self):
-    self.ViewPort = np.matrix([
-      [200, 0, 0, 400],
-      [0, 200, 0, 300],
-      [0, 0, 128, 128],
-      [0, 0, 0, 1]
-    ])
-    
+
+
+
+
   def load(self, filename, translate=(0, 0, 0), scale=(1, 1, 1), 
             texture=None, shader=None, normalmap=None):
     """
@@ -439,3 +411,40 @@ class Render(object):
           self.triangle(A, B, C, color(grey, grey, grey))
           self.triangle(A, C, D, color(grey, grey, grey))
 
+
+
+  def lookAt(self, eye, center, up):
+    z = norm(sub(eye, center))
+    x = norm(cross(up, z))
+    y = norm(cross(z, x))
+
+    self.View = np.matrix([
+      [x.x, x.y, x.z, -center.x],
+      [y.x, y.y, y.z, -center.y],
+      [z.x, z.y, z.z, -center.z],
+      [0, 0, 0, 1]
+    ])
+
+    self.projection(-1 / length(sub(eye, center)))
+    self.viewport()
+
+
+
+  def projection(self, coeff):
+    self.Projection = np.matrix([
+      [1, 0, 0, 0],
+      [0, 1, 0, 0],
+      [0, 0, 1, 0],
+      [0, 0, coeff, 1]
+    ])
+
+  def viewport(self):
+    self.ViewPort = np.matrix([
+      [200, 0, 0, 400],
+      [0, 200, 0, 300],
+      [0, 0, 128, 128],
+      [0, 0, 0, 1]
+    ])
+  
+    
+    
