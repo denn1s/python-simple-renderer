@@ -254,6 +254,9 @@ class Render(object):
 
         z = A.z * w + B.z * v + C.z * u
 
+        if x < 0 or y < 0:
+          continue
+
         if x < len(self.zbuffer) and y < len(self.zbuffer[x]) and z > self.zbuffer[x][y]:
           self.point(x, y, color)
           self.zbuffer[x][y] = z
@@ -325,14 +328,27 @@ class Render(object):
           normal = norm(cross(sub(vertices[0], vertices[1]), sub(vertices[1], vertices[2])))  # no necesitamos dos normales!!
           intensity = dot(normal, light)
           grey = round(255 * intensity)
-          if grey < 0:
-            continue # dont paint this face
 
-          # vertices are ordered, no need to sort!
-          # vertices.sort(key=lambda v: v.x + v.y)
-  
           A, B, C, D = vertices 
-        
-          self.triangle(A, B, C, color(grey, grey, grey))
-          self.triangle(A, C, D, color(grey, grey, grey))
+
+          if not texture:
+            grey = round(255 * intensity)
+            if grey < 0:
+              continue
+            self.triangle(A, B, C, color(grey, grey, grey))
+            self.triangle(A, C, D, color(grey, grey, grey))            
+          else:
+            t1 = face[0][1] - 1
+            t2 = face[1][1] - 1
+            t3 = face[2][1] - 1
+            t4 = face[3][1] - 1
+            tA = V3(*model.tvertices[t1])
+            tB = V3(*model.tvertices[t2])
+            tC = V3(*model.tvertices[t3])
+            tD = V3(*model.tvertices[t4])
+            
+            self.triangle(A, B, C, texture=texture, texture_coords=(tA, tB, tC), intensity=intensity)
+            self.triangle(A, C, D, texture=texture, texture_coords=(tA, tC, tD), intensity=intensity)
+            
+
 
