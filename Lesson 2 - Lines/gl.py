@@ -108,14 +108,11 @@ class Render(object):
     """
     self.write(filename)
 
-    try:
-      from wand.image import Image
-      from wand.display import display
+    from wand.image import Image
+    from wand.display import display
 
-      with Image(filename=filename) as image:
-        display(image)
-    except ImportError:
-      pass  # do nothing if no wand is installed
+    with Image(filename=filename) as image:
+      display(image)
 
   def set_color(self, color):
     self.current_color = color

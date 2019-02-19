@@ -44,7 +44,7 @@ def cross(v0, v1):
   """
     Input: 2 size 3 vectors
     Output: Size 3 vector with the cross product
-  """  
+  """
   return V3(
     v0.y * v1.z - v0.z * v1.y,
     v0.z * v1.x - v0.x * v1.z,
@@ -245,11 +245,79 @@ class Render(object):
             self.point(y, x, color)
         else:
             self.point(x, y, color)
-        
+
         offset += dy * 2
         if offset >= threshold:
             y += 1 if y1 < y2 else -1
             threshold += dx * 2
+
+  def triangle1(self, A, B, C, color=None):
+    # paso 1, ordenamos los vertices en orden ascendiente
+    if A.y > B.y:
+      A, B = B, A
+    if A.y > C.y:
+      A, C = C, A
+    if B.y > C.y:
+      B, C = C, B
+
+    self.line(A, B, color)
+    self.line(B, C, color)
+    self.line(C, A, color)
+
+  def triangle2(self, A, B, C, color=None):
+    # paso 2, partimos el triangulo a la mitad
+    if A.y > B.y:
+      A, B = B, A
+    if A.y > C.y:
+      A, C = C, A
+    if B.y > C.y:
+      B, C = C, B
+
+    dx_ac = C.x - A.x
+    dy_ac = C.y - A.y
+
+    mi_ac = dx_ac/dy_ac
+
+    dx_ab = B.x - A.x
+    dy_ab = B.y - A.y
+
+    mi_ab = dx_ab/dy_ab
+
+    for y in range(A.y, B.y + 1):
+        xi = round(A.x - mi_ac * (A.y - y))
+        xf = round(A.x - mi_ab * (A.y - y))
+
+        self.point(xi, y)
+        self.point(xf, y)
+
+  def triangle3(self, A, B, C, color=None):
+    # paso 3, llenemos el triangulo!
+    if A.y > B.y:
+      A, B = B, A
+    if A.y > C.y:
+      A, C = C, A
+    if B.y > C.y:
+      B, C = C, B
+
+    dx_ac = C.x - A.x
+    dy_ac = C.y - A.y
+
+    mi_ac = dx_ac/dy_ac
+
+    dx_ab = B.x - A.x
+    dy_ab = B.y - A.y
+
+    mi_ab = dx_ab/dy_ab
+
+    for y in range(A.y, B.y + 1):
+        xi = round(A.x - mi_ac * (A.y - y))
+        xf = round(A.x - mi_ab * (A.y - y))
+
+        if xi > xf:
+            xi, xf = xf, xi
+        for x in range(xi, xf + 1):
+            self.point(x, y, color)
+
 
   def triangle(self, A, B, C, color=None):
     if A.y > B.y:
@@ -304,7 +372,7 @@ class Render(object):
       round((vertex[1] + translate[1]) * scale[1]),
       round((vertex[2] + translate[2]) * scale[2])
     )
-    
+
   def load(self, filename, translate=(0, 0, 0), scale=(1, 1, 1)):
     """
     Loads an obj file in the screen
@@ -330,13 +398,7 @@ class Render(object):
           b = self.transform(model.vertices[f2], translate, scale)
           c = self.transform(model.vertices[f3], translate, scale)
 
-          normal = norm(cross(sub(b, a), sub(c, a)))
-          intensity = dot(normal, light)
-          grey = round(255 * intensity)
-          if grey < 0:
-            continue  
-          
-          self.triangle(a, b, c, color(grey, grey, grey))
+          self.triangle(a, b, c, color(255 * random.random(), 255 * random.random(), 255 * random.random()))
         else:
           # assuming 4
           f1 = face[0][0] - 1
@@ -359,9 +421,9 @@ class Render(object):
 
           # vertices are ordered, no need to sort!
           # vertices.sort(key=lambda v: v.x + v.y)
-  
-          A, B, C, D = vertices 
-        
-          self.triangle(A, B, C, color(grey, grey, grey))
-          self.triangle(A, C, D, color(grey, grey, grey))
+
+          A, B, C, D = vertices
+
+          self.triangle2(A, B, C, color(grey, grey, grey))
+          self.triangle2(A, C, D, color(grey, grey, grey))
 
