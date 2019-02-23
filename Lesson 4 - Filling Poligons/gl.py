@@ -251,80 +251,12 @@ class Render(object):
             y += 1 if y1 < y2 else -1
             threshold += dx * 2
 
-  def triangle1(self, A, B, C, color=None):
-    # paso 1, ordenamos los vertices en orden ascendiente
-    if A.y > B.y:
-      A, B = B, A
-    if A.y > C.y:
-      A, C = C, A
-    if B.y > C.y:
-      B, C = C, B
-
-    self.line(A, B, color)
-    self.line(B, C, color)
-    self.line(C, A, color)
-
-  def triangle2(self, A, B, C, color=None):
-    # paso 2, partimos el triangulo a la mitad
-    if A.y > B.y:
-      A, B = B, A
-    if A.y > C.y:
-      A, C = C, A
-    if B.y > C.y:
-      B, C = C, B
-
-    dx_ac = C.x - A.x
-    dy_ac = C.y - A.y
-
-    mi_ac = dx_ac/dy_ac
-
-    dx_ab = B.x - A.x
-    dy_ab = B.y - A.y
-
-    mi_ab = dx_ab/dy_ab
-
-    for y in range(A.y, B.y + 1):
-        xi = round(A.x - mi_ac * (A.y - y))
-        xf = round(A.x - mi_ab * (A.y - y))
-
-        self.point(xi, y)
-        self.point(xf, y)
-
-  def triangle3(self, A, B, C, color=None):
-    # paso 3, llenemos el triangulo!
-    if A.y > B.y:
-      A, B = B, A
-    if A.y > C.y:
-      A, C = C, A
-    if B.y > C.y:
-      B, C = C, B
-
-    dx_ac = C.x - A.x
-    dy_ac = C.y - A.y
-
-    mi_ac = dx_ac/dy_ac
-
-    dx_ab = B.x - A.x
-    dy_ab = B.y - A.y
-
-    mi_ab = dx_ab/dy_ab
-
-    for y in range(A.y, B.y + 1):
-        xi = round(A.x - mi_ac * (A.y - y))
-        xf = round(A.x - mi_ab * (A.y - y))
-
-        if xi > xf:
-            xi, xf = xf, xi
-        for x in range(xi, xf + 1):
-            self.point(x, y, color)
-
-
   def triangle(self, A, B, C, color=None):
     if A.y > B.y:
       A, B = B, A
     if A.y > C.y:
       A, C = C, A
-    if B.y > C.y: 
+    if B.y > C.y:
       B, C = C, B
 
     dx_ac = C.x - A.x
@@ -351,10 +283,6 @@ class Render(object):
     dy_bc = C.y - B.y
     if dy_bc:
         mi_bc = dx_bc/dy_bc
-
-        # dacx = C.x - A.x
-        # dacy = C.y - A.y
-        # miac = dacx/dacy  // we have mi_ac already!
 
         for y in range(B.y, C.y + 1):
             xi = round(A.x - mi_ac * (A.y - y))
@@ -384,8 +312,6 @@ class Render(object):
     """
     model = Obj(filename)
 
-    light = V3(0,0,1)
-
     for face in model.vfaces:
         vcount = len(face)
 
@@ -398,7 +324,13 @@ class Render(object):
           b = self.transform(model.vertices[f2], translate, scale)
           c = self.transform(model.vertices[f3], translate, scale)
 
-          self.triangle(a, b, c, color(255 * random.random(), 255 * random.random(), 255 * random.random()))
+          self.triangle(a, b, c,
+            color(
+              random.randint(0, 255),
+              random.randint(0, 255),
+              random.randint(0, 255)
+            )
+          )
         else:
           # assuming 4
           f1 = face[0][0] - 1
@@ -413,17 +345,26 @@ class Render(object):
             self.transform(model.vertices[f4], translate, scale)
           ]
 
-          normal = norm(cross(sub(vertices[0], vertices[1]), sub(vertices[1], vertices[2])))  # no necesitamos dos normales!!
-          intensity = dot(normal, light)
-          grey = round(255 * intensity)
-          if grey < 0:
-            continue # dont paint this face
-
-          # vertices are ordered, no need to sort!
-          # vertices.sort(key=lambda v: v.x + v.y)
-
           A, B, C, D = vertices
 
-          self.triangle2(A, B, C, color(grey, grey, grey))
-          self.triangle2(A, C, D, color(grey, grey, grey))
+          self.triangle(A, B, C,
+            color(
+              random.randint(0, 255),
+              random.randint(0, 255),
+              random.randint(0, 255)
+            )
+          )
+          self.triangle(A, C, D,
+            color(
+              random.randint(0, 255),
+              random.randint(0, 255),
+              random.randint(0, 255)
+            )
+          )
 
+
+r = Render(200, 200)
+r.triangle(V2(10, 70),  V2(50, 160), V2(70, 80), color(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
+r.triangle(V2(180, 50), V2(150, 1),  V2(70, 180), color(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
+r.triangle(V2(180, 150), V2(120, 160), V2(130, 180), color(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
+r.display('out.bmp')

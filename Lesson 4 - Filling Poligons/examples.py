@@ -24,7 +24,7 @@ def model():
     Draws a face, now 30% less cute
     """
     r = Render(800, 600)
-    r.load('./models/model.obj', (25, 5, 0), (15, 15, 15))
+    r.load('./models/model.obj', (3, 3, 0), (200, 200, 15))
     r.display('out.bmp')
 
 
