@@ -1,164 +1,8 @@
-import struct
 import random
-import numpy as np
+import numpy
+from numpy import matrix, cos, sin, tan
 from obj import Obj, Texture
-from collections import namedtuple
-
-# ===============================================================
-# Math
-# ===============================================================
-
-V2 = namedtuple('Point2', ['x', 'y'])
-V3 = namedtuple('Point3', ['x', 'y', 'z'])
-
-
-def sum(v0, v1):
-  """
-    Input: 2 size 3 vectors
-    Output: Size 3 vector with the per element sum
-  """
-  return V3(v0.x + v1.x, v0.y + v1.y, v0.z + v1.z)
-
-def sub(v0, v1):
-  """
-    Input: 2 size 3 vectors
-    Output: Size 3 vector with the per element substraction
-  """
-  return V3(v0.x - v1.x, v0.y - v1.y, v0.z - v1.z)
-
-def mul(v0, k):
-  """
-    Input: 2 size 3 vectors
-    Output: Size 3 vector with the per element multiplication
-  """  
-  return V3(v0.x * k, v0.y * k, v0.z *k)
-
-def dot(v0, v1):
-  """
-    Input: 2 size 3 vectors
-    Output: Scalar with the dot product
-  """
-  return v0.x * v1.x + v0.y * v1.y + v0.z * v1.z
-
-def cross(v0, v1):
-  """
-    Input: 2 size 3 vectors
-    Output: Size 3 vector with the cross product
-  """  
-  return V3(
-    v0.y * v1.z - v0.z * v1.y,
-    v0.z * v1.x - v0.x * v1.z,
-    v0.x * v1.y - v0.y * v1.x,
-  )
-
-def length(v0):
-  """
-    Input: 1 size 3 vector
-    Output: Scalar with the length of the vector
-  """  
-  return (v0.x**2 + v0.y**2 + v0.z**2)**0.5
-
-def norm(v0):
-  """
-    Input: 1 size 3 vector
-    Output: Size 3 vector with the normal of the vector
-  """  
-  v0 = V3(*v0)
-  v0length = length(v0)
-
-  if not v0length:
-    return V3(0, 0, 0)
-
-  return V3(v0.x/v0length, v0.y/v0length, v0.z/v0length)
-
-def bbox(*vertices):
-  """
-    Input: n size 2 vectors
-    Output: 2 size 2 vectors defining the smallest bounding rectangle possible
-  """  
-  xs = [ vertex.x for vertex in vertices ]
-  ys = [ vertex.y for vertex in vertices ]
-  xs.sort()
-  ys.sort()
-
-  return V2(xs[0], ys[0]), V2(xs[-1], ys[-1])
-
-def barycentric(A, B, C, P):
-  """
-    Input: 3 size 2 vectors and a point
-    Output: 3 barycentric coordinates of the point in relation to the triangle formed
-            * returns -1, -1, -1 for degenerate triangles
-  """  
-  bary = cross(
-    V3(C.x - A.x, B.x - A.x, A.x - P.x), 
-    V3(C.y - A.y, B.y - A.y, A.y - P.y)
-  )
-
-  if abs(bary[2]) < 1:
-    return -1, -1, -1   # this triangle is degenerate, return anything outside
-
-  return (
-    1 - (bary[0] + bary[1]) / bary[2], 
-    bary[1] / bary[2], 
-    bary[0] / bary[2]
-  )
-
-def ndc(point):
-  point = V3(*point)
-  return V3(
-    point.x / point.z,
-    point.y / point.z,
-    point.z / point.z
-  )
-
-
-# ===============================================================
-# Utils
-# ===============================================================
-
-
-def char(c):
-  """
-  Input: requires a size 1 string
-  Output: 1 byte of the ascii encoded char 
-  """
-  return struct.pack('=c', c.encode('ascii'))
-
-def word(w):
-  """
-  Input: requires a number such that (-0x7fff - 1) <= number <= 0x7fff
-         ie. (-32768, 32767)
-  Output: 2 bytes
-
-  Example:  
-  >>> struct.pack('=h', 1)
-  b'\x01\x00'
-  """
-  return struct.pack('=h', w)
-
-def dword(d):
-  """
-  Input: requires a number such that -2147483648 <= number <= 2147483647
-  Output: 4 bytes
-
-  Example:
-  >>> struct.pack('=l', 1)
-  b'\x01\x00\x00\x00'
-  """
-  return struct.pack('=l', d)
-
-def color(r, g, b):
-  """
-  Input: each parameter must be a number such that 0 <= number <= 255
-         each number represents a color in rgb 
-  Output: 3 bytes
-
-  Example:
-  >>> bytes([0, 0, 255])
-  b'\x00\x00\xff'
-  """
-  return bytes([b, g, r])
-
+from lib import *
 
 # ===============================================================
 # Constants
@@ -178,49 +22,19 @@ class Render(object):
     self.height = height
     self.current_color = WHITE
     self.clear()
-    self.texture = None
-    self.shader = None
-    self.normalmap = None
+    self.light = V3(0,0,1)
+    self.active_texture = None
+    self.active_vertex_array = []
 
   def clear(self):
     self.pixels = [
-      [BLACK for x in range(self.width)] 
+      [BLACK for x in range(self.width)]
       for y in range(self.height)
     ]
-    self.zbuffer = [
-      [-float('inf') for x in range(self.width)]
-      for y in range(self.height)
-    ]
+    self.zbuffer = numpy.full((self.height, self.width), -numpy.inf)
 
   def write(self, filename):
-    f = open(filename, 'bw')
-
-    # File header (14 bytes)
-    f.write(char('B'))
-    f.write(char('M'))
-    f.write(dword(14 + 40 + self.width * self.height * 3))
-    f.write(dword(0))
-    f.write(dword(14 + 40))
-
-    # Image header (40 bytes)
-    f.write(dword(40))
-    f.write(dword(self.width))
-    f.write(dword(self.height))
-    f.write(word(1))
-    f.write(word(24))
-    f.write(dword(0))
-    f.write(dword(self.width * self.height * 3))
-    f.write(dword(0))
-    f.write(dword(0))
-    f.write(dword(0))
-    f.write(dword(0))
-
-    # Pixel data (width x height x 3 pixels)
-    for x in range(self.height):
-      for y in range(self.width):
-        f.write(self.pixels[x][y])
-
-    f.close()
+    writebmp(filename, self.width, self.height, self.pixels)
 
   def display(self, filename='out.bmp'):
     """
@@ -248,104 +62,192 @@ class Render(object):
       # To avoid index out of range exceptions
       pass
 
-  def triangle(self, A, B, C, color=None, texture_coords=(), varying_normals=()):
+  def triangle(self):
+    A = next(self.active_vertex_array)
+    B = next(self.active_vertex_array)
+    C = next(self.active_vertex_array)
+
+    if self.active_texture:
+      tA = next(self.active_vertex_array)
+      tB = next(self.active_vertex_array)
+      tC = next(self.active_vertex_array)
+
+    nA = next(self.active_vertex_array)
+    nB = next(self.active_vertex_array)
+    nC = next(self.active_vertex_array)
+
     bbox_min, bbox_max = bbox(A, B, C)
+
+    normal = norm(cross(sub(B, A), sub(C, A)))
+    intensity = dot(normal, self.light)
+    if intensity < 0:
+      return
 
     for x in range(bbox_min.x, bbox_max.x + 1):
       for y in range(bbox_min.y, bbox_max.y + 1):
         w, v, u = barycentric(A, B, C, V2(x, y))
         if w < 0 or v < 0 or u < 0:  # 0 is actually a valid value! (it is on the edge)
           continue
-        
-        color = self.shader(self,
+
+        if self.active_texture:
+          tx = tA.x * w + tB.x * v + tC.x * u
+          ty = tA.y * w + tB.y * v + tC.y * u
+
+        color = self.active_shader(
+            self,
             triangle=(A, B, C),
             bar=(w, v, u),
-            varying_normals=varying_normals,
-            texture_coords=texture_coords)
+            texture_coords=(tx, ty),
+            varying_normals=(nA, nB, nC)
+        )
+
+        # color = self.active_texture.get_color(tx, ty, intensity)
 
         z = A.z * w + B.z * v + C.z * u
+
+        if x < 0 or y < 0:
+          continue
 
         if x < len(self.zbuffer) and y < len(self.zbuffer[x]) and z > self.zbuffer[x][y]:
           self.point(x, y, color)
           self.zbuffer[x][y] = z
 
-  def transform(self, vertex, translate=(0, 0, 0), scale=(1, 1, 1)):
-    # returns a vertex 3, translated and transformed
-    return V3(
-      round((vertex[0] + translate[0]) * scale[0]),
-      round((vertex[1] + translate[1]) * scale[1]),
-      round((vertex[2] + translate[2]) * scale[2])
-    )
-    
-  def load(self, filename, translate=(0, 0, 0), scale=(1, 1, 1), 
-            texture=None, shader=None, normalmap=None):
-    """
-    Loads an obj file in the screen
-    Input: 
-      filename: the full path of the obj file
-      translate: (translateX, translateY) how much the model will be translated during render
-      scale: (scaleX, scaleY) how much the model should be scaled
-      texture: texture file to use
-    """
+  def transform(self, vertex):
+    augmented_vertex = [
+      vertex.x,
+      vertex.y,
+      vertex.z,
+      1
+    ]
+    tranformed_vertex = self.Viewport @ self.Projection @ self.View @ self.Model @ augmented_vertex
+
+    tranformed_vertex = tranformed_vertex.tolist()[0]
+
+    tranformed_vertex = [
+      (tranformed_vertex[0]/tranformed_vertex[3]),
+      (tranformed_vertex[1]/tranformed_vertex[3]),
+      (tranformed_vertex[2]/tranformed_vertex[3])
+    ]
+    print(V3(*tranformed_vertex))
+    return V3(*tranformed_vertex)
+
+  def load(self, filename, translate=(0, 0, 0), scale=(1, 1, 1), rotate=(0, 0, 0)):
+    self.loadModelMatrix(translate, scale, rotate)
+
     model = Obj(filename)
-    self.light = V3(0,0,1)
-    self.texture = texture
-    self.shader = shader
-    self.normalmap = normalmap
+    vertex_buffer_object = []
 
     for face in model.faces:
-        vcount = len(face)
+        for facepart in face:
+          vertex = self.transform(V3(*model.vertices[facepart[0]]))
+          vertex_buffer_object.append(vertex)
 
-        if vcount == 3:
-          f1 = face[0][0] - 1
-          f2 = face[1][0] - 1
-          f3 = face[2][0] - 1
+        if self.active_texture:
+          for facepart in face:
+            tvertex = V3(*model.tvertices[facepart[1]])
+            vertex_buffer_object.append(tvertex)
 
-          a = self.transform(model.vertices[f1], translate, scale)
-          b = self.transform(model.vertices[f2], translate, scale)
-          c = self.transform(model.vertices[f3], translate, scale)
+          for facepart in face:
+            nvertex = V3(*model.normals[facepart[2]])
+            vertex_buffer_object.append(nvertex)
 
-          n1 = face[0][2] - 1
-          n2 = face[1][2] - 1
-          n3 = face[2][2] - 1      
-          nA = V3(*model.normals[n1])
-          nB = V3(*model.normals[n2])
-          nC = V3(*model.normals[n3])
+    self.active_vertex_array = iter(vertex_buffer_object)
 
-          t1 = face[0][1] - 1
-          t2 = face[1][1] - 1
-          t3 = face[2][1] - 1
-          tA = V3(*model.tvertices[t1])
-          tB = V3(*model.tvertices[t2])
-          tC = V3(*model.tvertices[t3])
+  def loadModelMatrix(self, translate=(0, 0, 0), scale=(1, 1, 1), rotate=(0, 0, 0)):
+    translate = V3(*translate)
+    scale = V3(*scale)
+    rotate = V3(*rotate)
 
-          self.triangle(a, b, c, texture_coords=(tA, tB, tC), varying_normals=(nA, nB, nC))
-          
-        else:
-          # assuming 4
-          f1 = face[0][0] - 1
-          f2 = face[1][0] - 1
-          f3 = face[2][0] - 1
-          f4 = face[3][0] - 1   
+    translation_matrix = matrix([
+      [1, 0, 0, translate.x],
+      [0, 1, 0, translate.y],
+      [0, 0, 1, translate.z],
+      [0, 0, 0, 1],
+    ])
 
-          vertices = [
-            self.transform(model.vertices[f1], translate, scale),
-            self.transform(model.vertices[f2], translate, scale),
-            self.transform(model.vertices[f3], translate, scale),
-            self.transform(model.vertices[f4], translate, scale)
-          ]
 
-          normal = norm(cross(sub(vertices[0], vertices[1]), sub(vertices[1], vertices[2])))  # no necesitamos dos normales!!
-          intensity = dot(normal, light)
-          grey = round(255 * intensity)
-          if grey < 0:
-            continue # dont paint this face
+    a = rotate.x
+    rotation_matrix_x = matrix([
+      [1, 0, 0, 0],
+      [0, cos(a), -sin(a), 0],
+      [0, sin(a),  cos(a), 0],
+      [0, 0, 0, 1]
+    ])
 
-          # vertices are ordered, no need to sort!
-          # vertices.sort(key=lambda v: v.x + v.y)
-  
-          A, B, C, D = vertices 
-        
-          self.triangle(A, B, C, color(grey, grey, grey))
-          self.triangle(A, C, D, color(grey, grey, grey))
+    a = rotate.y
+    rotation_matrix_y = matrix([
+      [cos(a), 0,  sin(a), 0],
+      [     0, 1,       0, 0],
+      [-sin(a), 0,  cos(a), 0],
+      [     0, 0,       0, 1]
+    ])
+
+    a = rotate.z
+    rotation_matrix_z = matrix([
+      [cos(a), -sin(a), 0, 0],
+      [sin(a),  cos(a), 0, 0],
+      [0, 0, 1, 0],
+      [0, 0, 0, 1]
+    ])
+
+    rotation_matrix = rotation_matrix_x @ rotation_matrix_y @ rotation_matrix_z
+
+    scale_matrix = matrix([
+      [scale.x, 0, 0, 0],
+      [0, scale.y, 0, 0],
+      [0, 0, scale.z, 0],
+      [0, 0, 0, 1],
+    ])
+
+    self.Model = translation_matrix @ rotation_matrix @ scale_matrix
+
+  def loadViewMatrix(self, x, y, z, center):
+    M = matrix([
+      [x.x, x.y, x.z,  0],
+      [y.x, y.y, y.z, 0],
+      [z.x, z.y, z.z, 0],
+      [0,     0,   0, 1]
+    ])
+
+    O = matrix([
+      [1, 0, 0, -center.x],
+      [0, 1, 0, -center.y],
+      [0, 0, 1, -center.z],
+      [0, 0, 0, 1]
+    ])
+
+    self.View = M @ O
+
+  def loadProjectionMatrix(self, coeff):
+    self.Projection =  matrix([
+      [1, 0, 0, 0],
+      [0, 1, 0, 0],
+      [0, 0, 1, 0],
+      [0, 0, coeff, 1]
+    ])
+
+  def loadViewportMatrix(self, x = 0, y = 0):
+    self.Viewport =  matrix([
+      [self.width/2, 0, 0, x + self.width/2],
+      [0, self.height/2, 0, y + self.height/2],
+      [0, 0, 128, 128],
+      [0, 0, 0, 1]
+    ])
+
+  def lookAt(self, eye, center, up):
+    z = norm(sub(eye, center))
+    x = norm(cross(up, z))
+    y = norm(cross(z, x))
+    self.loadViewMatrix(x, y, z, center)
+    self.loadProjectionMatrix(-1 / length(sub(eye, center)))
+    self.loadViewportMatrix()
+
+  def draw_arrays(self, polygon):
+    if polygon == 'TRIANGLES':
+      try:
+        while True:
+          self.triangle()
+      except StopIteration:
+        print('Done.')
+
 

@@ -2,16 +2,11 @@ import numpy as np
 from gl import *
 
 points = [
-  (165, 380), (185, 360), (180, 330), (207, 345), (233, 330), (230, 360), (250, 380), (220, 385), (205, 410), (193, 383)
+  (200, 200), (400, 200), (400, 400), (200, 400)
 ]
 
-pt = np.transpose(points)
-center = V2(
-  int((max(pt[0]) + min(pt[0]))/2),
-  int((max(pt[1]) + min(pt[1]))/2)
-)
+center = V2(300, 300)
 
-a = 90
 
 move_to_center = np.matrix([
   [1, 0, -center.x],
@@ -19,10 +14,11 @@ move_to_center = np.matrix([
   [0, 0, 1]
 ])
 
+a = 10
 rotate_matrix = np.matrix([
-  [np.cos(a),  -np.sin(a), 0],
-  [np.sin(a),  np.cos(a), 0],
-  [0.01, 0.001, 1]
+  [1, 0, 0],
+  [0, 1, 0],
+  [0.002, 0, 1]
 ])
 
 move_back = np.matrix([
@@ -31,34 +27,21 @@ move_back = np.matrix([
   [0, 0, 1]
 ])
 
+
 transform_matrix = move_back @ rotate_matrix @ move_to_center
 
-
+# draw lines
 transformed_points = []
 
 for point in points:
   point = V2(*point)
-  tpoint = np.dot(transform_matrix, [point.x, point.y, 1]).tolist()[0]
-  tpoint = V3(*tpoint)
-  point = V2(
+  tpoint = transform_matrix @ [ point.x, point.y, 1 ]
+  tpoint = V3(tpoint)
+  npoint = V2(
     tpoint.x/tpoint.z,
     tpoint.y/tpoint.z
   )
-  transformed_points.append(point)
-
-
-print(transformed_points)
-
-
-
-
-
-
-
-
-
-
-
+  transformed_points.append(npoint)
 
 
 
@@ -76,11 +59,12 @@ for point in transformed_points:
   r.line(prev_point, point, WHITE)
   prev_point = point
 
-
+"""
 prev_point = points[-1]
 for point in points:
-  r.line(prev_point, point, color(255, 255, 0))
+  r.line(V2(*prev_point), V2(*point), color(0, 255, 0))
   prev_point = point
-
+"""
 
 r.display()
+

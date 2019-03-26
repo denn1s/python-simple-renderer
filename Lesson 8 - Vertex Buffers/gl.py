@@ -30,7 +30,7 @@ def mul(v0, k):
   """
     Input: 2 size 3 vectors
     Output: Size 3 vector with the per element multiplication
-  """  
+  """
   return V3(v0.x * k, v0.y * k, v0.z *k)
 
 def dot(v0, v1):
@@ -44,7 +44,7 @@ def cross(v0, v1):
   """
     Input: 2 size 3 vectors
     Output: Size 3 vector with the cross product
-  """  
+  """
   return V3(
     v0.y * v1.z - v0.z * v1.y,
     v0.z * v1.x - v0.x * v1.z,
@@ -55,14 +55,14 @@ def length(v0):
   """
     Input: 1 size 3 vector
     Output: Scalar with the length of the vector
-  """  
+  """
   return (v0.x**2 + v0.y**2 + v0.z**2)**0.5
 
 def norm(v0):
   """
     Input: 1 size 3 vector
     Output: Size 3 vector with the normal of the vector
-  """  
+  """
   v0length = length(v0)
 
   if not v0length:
@@ -74,7 +74,7 @@ def bbox(*vertices):
   """
     Input: n size 2 vectors
     Output: 2 size 2 vectors defining the smallest bounding rectangle possible
-  """  
+  """
   xs = [ vertex.x for vertex in vertices ]
   ys = [ vertex.y for vertex in vertices ]
   xs.sort()
@@ -87,9 +87,9 @@ def barycentric(A, B, C, P):
     Input: 3 size 2 vectors and a point
     Output: 3 barycentric coordinates of the point in relation to the triangle formed
             * returns -1, -1, -1 for degenerate triangles
-  """  
+  """
   bary = cross(
-    V3(C.x - A.x, B.x - A.x, A.x - P.x), 
+    V3(C.x - A.x, B.x - A.x, A.x - P.x),
     V3(C.y - A.y, B.y - A.y, A.y - P.y)
   )
 
@@ -97,8 +97,8 @@ def barycentric(A, B, C, P):
     return -1, -1, -1   # this triangle is degenerate, return anything outside
 
   return (
-    1 - (bary[0] + bary[1]) / bary[2], 
-    bary[1] / bary[2], 
+    1 - (bary[0] + bary[1]) / bary[2],
+    bary[1] / bary[2],
     bary[0] / bary[2]
   )
 
@@ -111,7 +111,7 @@ def barycentric(A, B, C, P):
 def char(c):
   """
   Input: requires a size 1 string
-  Output: 1 byte of the ascii encoded char 
+  Output: 1 byte of the ascii encoded char
   """
   return struct.pack('=c', c.encode('ascii'))
 
@@ -121,7 +121,7 @@ def word(w):
          ie. (-32768, 32767)
   Output: 2 bytes
 
-  Example:  
+  Example:
   >>> struct.pack('=h', 1)
   b'\x01\x00'
   """
@@ -141,7 +141,7 @@ def dword(d):
 def color(r, g, b):
   """
   Input: each parameter must be a number such that 0 <= number <= 255
-         each number represents a color in rgb 
+         each number represents a color in rgb
   Output: 3 bytes
 
   Example:
@@ -175,7 +175,7 @@ class Render(object):
 
   def clear(self):
     self.pixels = [
-      [BLACK for x in range(self.width)] 
+      [BLACK for x in range(self.width)]
       for y in range(self.height)
     ]
     self.zbuffer = [
