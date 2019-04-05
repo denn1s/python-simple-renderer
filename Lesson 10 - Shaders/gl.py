@@ -128,7 +128,6 @@ class Render(object):
       (tranformed_vertex[1]/tranformed_vertex[3]),
       (tranformed_vertex[2]/tranformed_vertex[3])
     ]
-    print(V3(*tranformed_vertex))
     return V3(*tranformed_vertex)
 
   def load(self, filename, translate=(0, 0, 0), scale=(1, 1, 1), rotate=(0, 0, 0)):
