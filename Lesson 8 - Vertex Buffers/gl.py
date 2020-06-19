@@ -1,6 +1,6 @@
 import struct
 import random
-import numpy as np
+import numpy
 from obj import Obj, Texture
 from collections import namedtuple
 
@@ -30,7 +30,7 @@ def mul(v0, k):
   """
     Input: 2 size 3 vectors
     Output: Size 3 vector with the per element multiplication
-  """  
+  """
   return V3(v0.x * k, v0.y * k, v0.z *k)
 
 def dot(v0, v1):
@@ -44,7 +44,7 @@ def cross(v0, v1):
   """
     Input: 2 size 3 vectors
     Output: Size 3 vector with the cross product
-  """  
+  """
   return V3(
     v0.y * v1.z - v0.z * v1.y,
     v0.z * v1.x - v0.x * v1.z,
@@ -55,15 +55,14 @@ def length(v0):
   """
     Input: 1 size 3 vector
     Output: Scalar with the length of the vector
-  """  
+  """
   return (v0.x**2 + v0.y**2 + v0.z**2)**0.5
 
 def norm(v0):
   """
     Input: 1 size 3 vector
     Output: Size 3 vector with the normal of the vector
-  """  
-  v0 = V3(*v0)
+  """
   v0length = length(v0)
 
   if not v0length:
@@ -75,7 +74,7 @@ def bbox(*vertices):
   """
     Input: n size 2 vectors
     Output: 2 size 2 vectors defining the smallest bounding rectangle possible
-  """  
+  """
   xs = [ vertex.x for vertex in vertices ]
   ys = [ vertex.y for vertex in vertices ]
   xs.sort()
@@ -88,9 +87,9 @@ def barycentric(A, B, C, P):
     Input: 3 size 2 vectors and a point
     Output: 3 barycentric coordinates of the point in relation to the triangle formed
             * returns -1, -1, -1 for degenerate triangles
-  """  
+  """
   bary = cross(
-    V3(C.x - A.x, B.x - A.x, A.x - P.x), 
+    V3(C.x - A.x, B.x - A.x, A.x - P.x),
     V3(C.y - A.y, B.y - A.y, A.y - P.y)
   )
 
@@ -98,17 +97,9 @@ def barycentric(A, B, C, P):
     return -1, -1, -1   # this triangle is degenerate, return anything outside
 
   return (
-    1 - (bary[0] + bary[1]) / bary[2], 
-    bary[1] / bary[2], 
+    1 - (bary[0] + bary[1]) / bary[2],
+    bary[1] / bary[2],
     bary[0] / bary[2]
-  )
-
-def ndc(point):
-  point = V3(*point)
-  return V3(
-    point.x / point.z,
-    point.y / point.z,
-    point.z / point.z
   )
 
 
@@ -120,7 +111,7 @@ def ndc(point):
 def char(c):
   """
   Input: requires a size 1 string
-  Output: 1 byte of the ascii encoded char 
+  Output: 1 byte of the ascii encoded char
   """
   return struct.pack('=c', c.encode('ascii'))
 
@@ -130,7 +121,7 @@ def word(w):
          ie. (-32768, 32767)
   Output: 2 bytes
 
-  Example:  
+  Example:
   >>> struct.pack('=h', 1)
   b'\x01\x00'
   """
@@ -150,7 +141,7 @@ def dword(d):
 def color(r, g, b):
   """
   Input: each parameter must be a number such that 0 <= number <= 255
-         each number represents a color in rgb 
+         each number represents a color in rgb
   Output: 3 bytes
 
   Example:
@@ -178,13 +169,13 @@ class Render(object):
     self.height = height
     self.current_color = WHITE
     self.clear()
-    self.texture = None
-    self.shader = None
-    self.normalmap = None
+    self.light = V3(0,0,1)
+    self.active_texture = None
+    self.active_vertex_array = []
 
   def clear(self):
     self.pixels = [
-      [BLACK for x in range(self.width)] 
+      [BLACK for x in range(self.width)]
       for y in range(self.height)
     ]
     self.zbuffer = [
@@ -248,22 +239,39 @@ class Render(object):
       # To avoid index out of range exceptions
       pass
 
-  def triangle(self, A, B, C, color=None, texture_coords=(), varying_normals=()):
+  def triangle(self):
+    A = next(self.active_vertex_array)
+    B = next(self.active_vertex_array)
+    C = next(self.active_vertex_array)
+
+    if self.active_texture:
+      tA = next(self.active_vertex_array)
+      tB = next(self.active_vertex_array)
+      tC = next(self.active_vertex_array)
+
     bbox_min, bbox_max = bbox(A, B, C)
+
+    normal = norm(cross(sub(B, A), sub(C, A)))
+    intensity = dot(normal, self.light)
+    if intensity < 0:
+      return
 
     for x in range(bbox_min.x, bbox_max.x + 1):
       for y in range(bbox_min.y, bbox_max.y + 1):
         w, v, u = barycentric(A, B, C, V2(x, y))
         if w < 0 or v < 0 or u < 0:  # 0 is actually a valid value! (it is on the edge)
           continue
-        
-        color = self.shader(self,
-            triangle=(A, B, C),
-            bar=(w, v, u),
-            varying_normals=varying_normals,
-            texture_coords=texture_coords)
+
+        if self.active_texture:
+          tx = tA.x * w + tB.x * v + tC.x * u
+          ty = tA.y * w + tB.y * v + tC.y * u
+
+          color = self.active_texture.get_color(tx, ty, intensity)
 
         z = A.z * w + B.z * v + C.z * u
+
+        if x < 0 or y < 0:
+          continue
 
         if x < len(self.zbuffer) and y < len(self.zbuffer[x]) and z > self.zbuffer[x][y]:
           self.point(x, y, color)
@@ -276,76 +284,39 @@ class Render(object):
       round((vertex[1] + translate[1]) * scale[1]),
       round((vertex[2] + translate[2]) * scale[2])
     )
-    
-  def load(self, filename, translate=(0, 0, 0), scale=(1, 1, 1), 
-            texture=None, shader=None, normalmap=None):
+
+  def load(self, filename, translate=(0, 0, 0), scale=(1, 1, 1), texture=None):
     """
     Loads an obj file in the screen
-    Input: 
+    Input:
       filename: the full path of the obj file
       translate: (translateX, translateY) how much the model will be translated during render
       scale: (scaleX, scaleY) how much the model should be scaled
       texture: texture file to use
     """
     model = Obj(filename)
-    self.light = V3(0,0,1)
-    self.texture = texture
-    self.shader = shader
-    self.normalmap = normalmap
+    vertex_buffer_object = []
 
-    for face in model.faces:
+    for face in model.vfaces:
         vcount = len(face)
 
-        if vcount == 3:
-          f1 = face[0][0] - 1
-          f2 = face[1][0] - 1
-          f3 = face[2][0] - 1
+        for v in range(vcount):
+          vertex = self.transform(model.vertices[face[v][0]], translate, scale)
+          vertex_buffer_object.append(vertex)
 
-          a = self.transform(model.vertices[f1], translate, scale)
-          b = self.transform(model.vertices[f2], translate, scale)
-          c = self.transform(model.vertices[f3], translate, scale)
+        if self.active_texture:
+          for v in range(vcount):
+            tvertex = V3(*model.tvertices[face[v][1]])
+            vertex_buffer_object.append(tvertex)
 
-          n1 = face[0][2] - 1
-          n2 = face[1][2] - 1
-          n3 = face[2][2] - 1      
-          nA = V3(*model.normals[n1])
-          nB = V3(*model.normals[n2])
-          nC = V3(*model.normals[n3])
+    self.active_vertex_array = iter(vertex_buffer_object)
 
-          t1 = face[0][1] - 1
-          t2 = face[1][1] - 1
-          t3 = face[2][1] - 1
-          tA = V3(*model.tvertices[t1])
-          tB = V3(*model.tvertices[t2])
-          tC = V3(*model.tvertices[t3])
+  def draw_arrays(self, polygon):
+    if polygon == 'TRIANGLES':
+      try:
+        while True:
+          self.triangle()
+      except StopIteration:
+        print('Done.')
 
-          self.triangle(a, b, c, texture_coords=(tA, tB, tC), varying_normals=(nA, nB, nC))
-          
-        else:
-          # assuming 4
-          f1 = face[0][0] - 1
-          f2 = face[1][0] - 1
-          f3 = face[2][0] - 1
-          f4 = face[3][0] - 1   
-
-          vertices = [
-            self.transform(model.vertices[f1], translate, scale),
-            self.transform(model.vertices[f2], translate, scale),
-            self.transform(model.vertices[f3], translate, scale),
-            self.transform(model.vertices[f4], translate, scale)
-          ]
-
-          normal = norm(cross(sub(vertices[0], vertices[1]), sub(vertices[1], vertices[2])))  # no necesitamos dos normales!!
-          intensity = dot(normal, light)
-          grey = round(255 * intensity)
-          if grey < 0:
-            continue # dont paint this face
-
-          # vertices are ordered, no need to sort!
-          # vertices.sort(key=lambda v: v.x + v.y)
-  
-          A, B, C, D = vertices 
-        
-          self.triangle(A, B, C, color(grey, grey, grey))
-          self.triangle(A, C, D, color(grey, grey, grey))
 

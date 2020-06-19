@@ -44,7 +44,7 @@ def cross(v0, v1):
   """
     Input: 2 size 3 vectors
     Output: Size 3 vector with the cross product
-  """  
+  """
   return V3(
     v0.y * v1.z - v0.z * v1.y,
     v0.z * v1.x - v0.x * v1.z,
@@ -245,7 +245,7 @@ class Render(object):
             self.point(y, x, color)
         else:
             self.point(x, y, color)
-        
+
         offset += dy * 2
         if offset >= threshold:
             y += 1 if y1 < y2 else -1
@@ -256,7 +256,7 @@ class Render(object):
       A, B = B, A
     if A.y > C.y:
       A, C = C, A
-    if B.y > C.y: 
+    if B.y > C.y:
       B, C = C, B
 
     dx_ac = C.x - A.x
@@ -284,10 +284,6 @@ class Render(object):
     if dy_bc:
         mi_bc = dx_bc/dy_bc
 
-        # dacx = C.x - A.x
-        # dacy = C.y - A.y
-        # miac = dacx/dacy  // we have mi_ac already!
-
         for y in range(B.y, C.y + 1):
             xi = round(A.x - mi_ac * (A.y - y))
             xf = round(B.x - mi_bc * (B.y - y))
@@ -304,7 +300,7 @@ class Render(object):
       round((vertex[1] + translate[1]) * scale[1]),
       round((vertex[2] + translate[2]) * scale[2])
     )
-    
+
   def load(self, filename, translate=(0, 0, 0), scale=(1, 1, 1)):
     """
     Loads an obj file in the screen
@@ -315,8 +311,6 @@ class Render(object):
       scale: (scaleX, scaleY) how much the model should be scaled
     """
     model = Obj(filename)
-
-    light = V3(0,0,1)
 
     for face in model.vfaces:
         vcount = len(face)
@@ -330,13 +324,13 @@ class Render(object):
           b = self.transform(model.vertices[f2], translate, scale)
           c = self.transform(model.vertices[f3], translate, scale)
 
-          normal = norm(cross(sub(b, a), sub(c, a)))
-          intensity = dot(normal, light)
-          grey = round(255 * intensity)
-          if grey < 0:
-            continue  
-          
-          self.triangle(a, b, c, color(grey, grey, grey))
+          self.triangle(a, b, c,
+            color(
+              random.randint(0, 255),
+              random.randint(0, 255),
+              random.randint(0, 255)
+            )
+          )
         else:
           # assuming 4
           f1 = face[0][0] - 1
@@ -351,17 +345,26 @@ class Render(object):
             self.transform(model.vertices[f4], translate, scale)
           ]
 
-          normal = norm(cross(sub(vertices[0], vertices[1]), sub(vertices[1], vertices[2])))  # no necesitamos dos normales!!
-          intensity = dot(normal, light)
-          grey = round(255 * intensity)
-          if grey < 0:
-            continue # dont paint this face
+          A, B, C, D = vertices
 
-          # vertices are ordered, no need to sort!
-          # vertices.sort(key=lambda v: v.x + v.y)
-  
-          A, B, C, D = vertices 
-        
-          self.triangle(A, B, C, color(grey, grey, grey))
-          self.triangle(A, C, D, color(grey, grey, grey))
+          self.triangle(A, B, C,
+            color(
+              random.randint(0, 255),
+              random.randint(0, 255),
+              random.randint(0, 255)
+            )
+          )
+          self.triangle(A, C, D,
+            color(
+              random.randint(0, 255),
+              random.randint(0, 255),
+              random.randint(0, 255)
+            )
+          )
 
+
+r = Render(200, 200)
+r.triangle(V2(10, 70),  V2(50, 160), V2(70, 80), color(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
+r.triangle(V2(180, 50), V2(150, 1),  V2(70, 180), color(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
+r.triangle(V2(180, 150), V2(120, 160), V2(130, 180), color(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))
+r.display('out.bmp')

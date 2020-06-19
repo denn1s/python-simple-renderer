@@ -20,6 +20,19 @@ def face():
     r.display('out.bmp')
 
 
+def model():
+    r = Render(800, 600)
+    r.load('./models/model.obj', (1, 1, 1), (300, 300, 300))
+    r.display('out.bmp')
+
+def figures():
+    """
+    Draws a cute face, now 30% less creepy!
+    """
+    r = Render(800, 600)
+    r.load('./models/figures.obj', (3, 1, 1), (100, 100, 100))
+    r.display('out.bmp')
+
 if __name__ == "__main__":
     example = sys.argv[1] if len(sys.argv) > 1 else ""
 
@@ -27,6 +40,10 @@ if __name__ == "__main__":
         cube()
     elif example == "face":
         face()
+    elif example == "model":
+        model()
+    elif example == "figures":
+        figures()
     else:
         print("Usage: python3 examples.py <example>")
         print("\nExample can be one of:\n")

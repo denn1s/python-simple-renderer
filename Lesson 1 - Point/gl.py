@@ -103,6 +103,21 @@ class Render(object):
 
     f.close()
 
+  def display(self, filename='out.bmp'):
+    """
+    Displays the image, a external library (wand) is used, but only for convenience during development
+    """
+    self.write(filename)
+
+    try:
+      from wand.image import Image
+      from wand.display import display
+
+      with Image(filename=filename) as image:
+        display(image)
+    except ImportError:
+      pass  # do nothing if no wand is installed
+
   def point(self, x, y, color = None):
     # 0,0 was intentionally left in the bottom left corner to mimic opengl
     self.pixels[y][x] = color or self.current_color

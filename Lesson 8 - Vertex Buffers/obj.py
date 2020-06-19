@@ -1,5 +1,4 @@
-import struct
-import numpy
+import struct 
 
 def color(r, g, b):
   return bytes([b, g, r])
@@ -23,7 +22,7 @@ class Obj(object):
             self.lines = f.read().splitlines()
         self.vertices = []
         self.tvertices = []
-        self.faces = []
+        self.vfaces = []
         self.read()
 
     def read(self):
@@ -38,10 +37,7 @@ class Obj(object):
                 elif prefix == 'vt':
                     self.tvertices.append(list(map(float, value.split(' '))))
                 elif prefix == 'f':
-                    self.faces.append([list(map(try_int_minus1, face.split('/'))) for face in value.split(' ')])
-
-
-import mmap
+                    self.vfaces.append([list(map(try_int_minus1, face.split('/'))) for face in value.split(' ')])
 
 class Texture(object):
     def __init__(self, path):
@@ -50,18 +46,37 @@ class Texture(object):
 
     def read(self):
         img = open(self.path, "rb")
-        m = mmap.mmap(img.fileno(), 0, access=mmap.ACCESS_READ)
-        ba = bytearray(m)
-        header_size = struct.unpack("=l", ba[10:14])[0]
-        self.width = struct.unpack("=l", ba[18:22])[0]
-        self.height = struct.unpack("=l", ba[18:22])[0]
-        all_bytes = ba[header_size::]
-        self.pixels = numpy.frombuffer(all_bytes, dtype='uint8')
+
+        img.seek(2 + 4 + 4)
+        header_size = struct.unpack("=l", img.read(4))[0]
+        img.seek(2 + 4 + 4 + 4 + 4)
+        self.width = struct.unpack("=l", img.read(4))[0]
+        self.height = struct.unpack("=l", img.read(4))[0]
+        img.seek(header_size)
+
+        self.pixels = []
+
+        for y in range(self.height):
+            self.pixels.append([])
+            for x in range(self.width):
+                b = ord(img.read(1))
+                g = ord(img.read(1))
+                r = ord(img.read(1))
+                self.pixels[y].append(color(r, g, b))
+
         img.close()
 
     def get_color(self, tx, ty, intensity):
         x = int(tx * self.width)
         y = int(ty * self.height)
-        index = (y * self.width + x) * 3
-        processed = self.pixels[index:index+3] * intensity
-        return bytes(processed.astype(numpy.uint8))
+
+        try:
+            return bytes(
+                    map(
+                        lambda b: round(b * intensity) if b * intensity > 0 and b * intensity < 255 else 0,
+                        self.pixels[y][x]
+                    )
+                )
+        except:
+            return color(255, 0, 0)
+

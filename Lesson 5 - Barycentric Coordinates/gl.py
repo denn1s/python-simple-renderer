@@ -30,7 +30,7 @@ def mul(v0, k):
   """
     Input: 2 size 3 vectors
     Output: Size 3 vector with the per element multiplication
-  """  
+  """
   return V3(v0.x * k, v0.y * k, v0.z *k)
 
 def dot(v0, v1):
@@ -88,19 +88,21 @@ def barycentric(A, B, C, P):
     Output: 3 barycentric coordinates of the point in relation to the triangle formed
             * returns -1, -1, -1 for degenerate triangles
   """  
-  bary = cross(
-    V3(C.x - A.x, B.x - A.x, A.x - P.x), 
-    V3(C.y - A.y, B.y - A.y, A.y - P.y)
+  cx, cy, cz = cross(
+    V3(B.x - A.x, C.x - A.x, A.x - P.x), 
+    V3(B.y - A.y, C.y - A.y, A.y - P.y)
   )
 
-  if abs(bary[2]) < 1:
+  if abs(cz) < 1:
     return -1, -1, -1   # this triangle is degenerate, return anything outside
 
-  return (
-    1 - (bary[0] + bary[1]) / bary[2], 
-    bary[1] / bary[2], 
-    bary[0] / bary[2]
-  )
+  # [cx cy cz] = [u v 1]
+
+  u = cx/cz
+  v = cy/cz
+  w = 1 - (u + v)
+
+  return w, v, u
 
 
 # ===============================================================

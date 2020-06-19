@@ -72,6 +72,10 @@ class Render(object):
       tB = next(self.active_vertex_array)
       tC = next(self.active_vertex_array)
 
+    nA = next(self.active_vertex_array)
+    nB = next(self.active_vertex_array)
+    nC = next(self.active_vertex_array)
+
     bbox_min, bbox_max = bbox(A, B, C)
 
     normal = norm(cross(sub(B, A), sub(C, A)))
@@ -89,7 +93,15 @@ class Render(object):
           tx = tA.x * w + tB.x * v + tC.x * u
           ty = tA.y * w + tB.y * v + tC.y * u
 
-          color = self.active_texture.get_color(tx, ty, intensity)
+        color = self.active_shader(
+            self,
+            triangle=(A, B, C),
+            bar=(w, v, u),
+            texture_coords=(tx, ty),
+            varying_normals=(nA, nB, nC)
+        )
+
+        # color = self.active_texture.get_color(tx, ty, intensity)
 
         z = A.z * w + B.z * v + C.z * u
 
@@ -116,7 +128,6 @@ class Render(object):
       (tranformed_vertex[1]/tranformed_vertex[3]),
       (tranformed_vertex[2]/tranformed_vertex[3])
     ]
-    print(V3(*tranformed_vertex))
     return V3(*tranformed_vertex)
 
   def load(self, filename, translate=(0, 0, 0), scale=(1, 1, 1), rotate=(0, 0, 0)):
@@ -134,6 +145,10 @@ class Render(object):
           for facepart in face:
             tvertex = V3(*model.tvertices[facepart[1]])
             vertex_buffer_object.append(tvertex)
+
+          for facepart in face:
+            nvertex = V3(*model.normals[facepart[2]])
+            vertex_buffer_object.append(nvertex)
 
     self.active_vertex_array = iter(vertex_buffer_object)
 
